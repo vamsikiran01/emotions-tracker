@@ -1,15 +1,18 @@
 import { useMemo, useState } from 'react';
-import { Flame, Shield, TrendingUp, BarChart3, CalendarDays, Trash2, Database } from 'lucide-react';
+import { Flame, Shield, TrendingUp, BarChart3, CalendarDays, Trash2, Database, Pencil, Save, X } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { getEntries, getWeeklyDominantEmotion, getEmotionDistribution, getStabilityScore, getStreak, clearEntries } from '@/lib/storage';
-import { EMOTION_META } from '@/lib/emotionEngine';
+import { getEntries, getWeeklyDominantEmotion, getEmotionDistribution, getStabilityScore, getStreak, clearEntries, updateEntry, deleteEntry } from '@/lib/storage';
+import { EMOTION_META, analyzeEmotion } from '@/lib/emotionEngine';
 import { STATUS_META, type MentalHealthStatus } from '@/lib/mentalHealthClassifier';
 
 const Dashboard = () => {
   const [entries, setEntries] = useState(() => getEntries());
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState('');
 
   const weeklyEmotion = useMemo(() => getWeeklyDominantEmotion(entries), [entries]);
   const distribution = useMemo(() => getEmotionDistribution(entries), [entries]);
@@ -35,6 +38,28 @@ const Dashboard = () => {
     if (confirm('Are you sure you want to delete all journal entries? This cannot be undone.')) {
       clearEntries();
       setEntries([]);
+    }
+  };
+
+  const handleEditStart = (entry: typeof entries[0]) => {
+    setEditingId(entry.id);
+    setEditText(entry.text);
+  };
+
+  const handleEditSave = (entry: typeof entries[0]) => {
+    const trimmed = editText.trim();
+    if (!trimmed) return;
+    const newResult = analyzeEmotion(trimmed);
+    const updated = { ...entry, text: trimmed, result: newResult };
+    updateEntry(updated);
+    setEntries(prev => prev.map(e => e.id === entry.id ? updated : e));
+    setEditingId(null);
+  };
+
+  const handleDeleteEntry = (id: string) => {
+    if (confirm('Delete this entry?')) {
+      deleteEntry(id);
+      setEntries(prev => prev.filter(e => e.id !== id));
     }
   };
 
@@ -163,19 +188,50 @@ const Dashboard = () => {
             <div className="space-y-3">
               {entries.map(entry => {
                 const meta = EMOTION_META[entry.result.primaryEmotion];
+                const isEditing = editingId === entry.id;
                 return (
                   <Card key={entry.id} className="shadow-sm border-border/50 hover:shadow-md transition-shadow">
-                    <CardContent className="p-4 flex items-start gap-3">
-                      <span className="text-2xl">{meta.emoji}</span>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <span className="text-xs text-muted-foreground">
-                            {new Date(entry.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                          </span>
-                          <Badge variant="secondary" className="text-xs">{meta.label}</Badge>
-                          <span className="text-xs text-muted-foreground">{entry.result.confidence}%</span>
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-3">
+                        <span className="text-2xl">{meta.emoji}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(entry.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                            </span>
+                            <Badge variant="secondary" className="text-xs">{meta.label}</Badge>
+                            <span className="text-xs text-muted-foreground">{entry.result.confidence}%</span>
+                          </div>
+                          {isEditing ? (
+                            <div className="space-y-2 mt-2">
+                              <Textarea
+                                value={editText}
+                                onChange={e => setEditText(e.target.value)}
+                                className="min-h-[80px] text-sm resize-none border-border bg-muted/30"
+                              />
+                              <div className="flex gap-2 justify-end">
+                                <Button variant="ghost" size="sm" onClick={() => setEditingId(null)} className="gap-1 h-7 text-xs">
+                                  <X className="h-3 w-3" /> Cancel
+                                </Button>
+                                <Button size="sm" onClick={() => handleEditSave(entry)} disabled={!editText.trim()} className="gap-1 h-7 text-xs">
+                                  <Save className="h-3 w-3" /> Save
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-sm text-foreground line-clamp-2">{entry.text}</p>
+                          )}
                         </div>
-                        <p className="text-sm text-foreground line-clamp-2">{entry.text}</p>
+                        {!isEditing && (
+                          <div className="flex gap-1 shrink-0">
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => handleEditStart(entry)}>
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => handleDeleteEntry(entry.id)}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
