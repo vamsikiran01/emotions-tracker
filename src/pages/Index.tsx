@@ -37,8 +37,8 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-gradient-to-br from-primary/5 via-accent/10 to-secondary/20">
-      <div className="container mx-auto px-4 py-8 max-w-2xl">
+    <div className="min-h-[calc(100vh-3.5rem)] md:min-h-[calc(100vh-4rem)] bg-gradient-to-br from-primary/5 via-accent/10 to-secondary/20">
+      <div className="container mx-auto px-3 sm:px-4 py-5 sm:py-8 max-w-2xl">
         {/* Affirmation */}
         <Card className="mb-8 border-none bg-gradient-to-r from-primary/10 to-accent/10 shadow-none">
           <CardContent className="py-4 px-6 text-center">
@@ -66,14 +66,14 @@ const Index = () => {
               onChange={e => setText(e.target.value)}
               disabled={analyzing}
             />
-            <div className="flex items-center justify-between mt-4">
-              <span className="text-xs text-muted-foreground">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between mt-4 gap-3">
+              <span className="text-xs text-muted-foreground text-center sm:text-left">
                 {text.length > 0 ? `${text.split(/\s+/).filter(Boolean).length} words` : 'Start writing...'}
               </span>
               <Button
                 onClick={handleAnalyze}
                 disabled={!text.trim() || analyzing}
-                className="gap-2 rounded-full px-6 bg-primary hover:bg-primary/90 text-primary-foreground shadow-md"
+                className="gap-2 rounded-full px-6 bg-primary hover:bg-primary/90 text-primary-foreground shadow-md min-h-[44px]"
                 size="lg"
               >
                 {analyzing ? (

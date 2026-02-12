@@ -40,10 +40,10 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-gradient-to-br from-primary/5 via-accent/10 to-secondary/20">
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="flex items-center justify-between mb-8">
+      <div className="container mx-auto px-3 sm:px-4 py-5 sm:py-8 max-w-4xl">
+        <div className="flex items-center justify-between mb-6 sm:mb-8">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Emotional Dashboard</h1>
+            <h1 className="text-xl md:text-3xl font-bold text-foreground">Emotional Dashboard</h1>
             <p className="text-sm text-muted-foreground mt-1">{entries.length} journal {entries.length === 1 ? 'entry' : 'entries'} recorded</p>
           </div>
           {entries.length > 0 && (
