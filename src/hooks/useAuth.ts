@@ -9,10 +9,23 @@ export function useAuth() {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+
+        // Send login alert on sign-in
+        if (event === 'SIGNED_IN' && session) {
+          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+          fetch(`${supabaseUrl}/functions/v1/send-login-alert`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({ userAgent: navigator.userAgent }),
+          }).catch(console.error);
+        }
       }
     );
 
