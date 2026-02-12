@@ -1,44 +1,32 @@
 
 
-# Optimize the Results Page
+# Remove "Neutral" from Emotion Categories
 
 ## Overview
-Polish the Results page with smooth animations, better visual hierarchy, improved responsiveness, and performance enhancements.
+Remove "neutral" as an emotion result. When no strong emotion is detected, the classifier will default to the closest low-intensity match instead of labeling it "neutral."
 
 ## Changes
 
-### 1. Staggered Fade-In Animations
-Each card will animate in sequentially with a slight delay, creating a satisfying reveal effect as results load. This uses CSS keyframes and Tailwind's `animate` utility -- no extra dependencies needed.
+### 1. `src/lib/emotionEngine.ts`
+- Remove `'neutral'` from the `EmotionType` union type (leaving 7 emotions: happy, sad, angry, fear, surprise, love, anxious)
+- Remove the `neutral` entry from `EMOTION_META`
+- Remove the `neutral` keyword group from `KEYWORD_MAP`
+- Remove `neutral` insights and suggestions arrays
+- Remove `neutral` from the `scores` and `matchedKeywords` initialization objects
+- Change the fallback logic: instead of boosting `neutral` when no strong signal is found, boost `happy` with a small score (since low-signal text is more likely calm/content than truly empty)
+- Keep `SentimentType: 'Neutral'` as-is since sentiment neutral is different from the emotion category
 
-### 2. Visual Hierarchy Improvements
-- Larger, more prominent primary emotion card with a gradient background matching the detected emotion
-- Better spacing and typography scaling between sections
-- Color-coded confidence progress bars (green for high, yellow for medium, red for low confidence)
-- Rounded emotion/sentiment badges with subtle shadows
+### 2. `src/lib/storage.ts`
+- Remove `neutral` from the `colorMap` in `getEmotionDistribution()`
 
-### 3. Mobile Responsiveness
-- Adjust padding, font sizes, and card spacing for small screens
-- Make the primary emotion emoji and text scale down gracefully
-- Stack badges vertically on very narrow screens
+### 3. `src/lib/mentalHealthClassifier.ts`
+- Change `STATUS_TO_EMOTION` mapping for `Normal` from `'neutral'` to `'happy'` (Normal status maps to calm/content)
 
-### 4. Performance Fixes
-- Replace the `navigate('/')` call inside the render body (which fires on every render when no entry exists) with a proper `useEffect` redirect
-- Memoize the color strip computation to avoid recalculating on re-renders
+### 4. `src/pages/Results.tsx`
+- No structural changes needed; the sentiment badge "Neutral" stays (it refers to sentiment, not emotion)
+- Any existing entries stored with "neutral" will still render but won't appear for new analyses
 
-### 5. Enhanced Mental Health Pattern Card
-- Add a color-coded left border matching the detected status
-- Improve the sample statements section with better visual distinction
-- Add a subtle disclaimer footer
-
-### 6. Print/Share-Friendly Layout
-- Add a "Share Results" or "Save as Image" hint at the bottom
-- Clean card borders for print-friendly output
-
-## Technical Details
-
-**Files modified:**
-- `src/pages/Results.tsx` -- Main changes: add animation classes, fix the redirect bug, improve responsive layout, enhance card styling
-- `src/index.css` -- Add staggered animation keyframes (`fadeSlideUp`)
-
-**No new dependencies required.** All animations use CSS keyframes + Tailwind utility classes.
+## Notes
+- Existing journal entries saved with "neutral" in localStorage will still display but the emotion won't be assigned to new entries going forward
+- The `SentimentType` "Neutral" is kept since it describes sentiment polarity, not the emotion category
 
