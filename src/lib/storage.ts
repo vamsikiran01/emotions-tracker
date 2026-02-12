@@ -24,6 +24,20 @@ export function saveEntry(entry: JournalEntry): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
 }
 
+export function updateEntry(updated: JournalEntry): void {
+  const entries = getEntries();
+  const idx = entries.findIndex(e => e.id === updated.id);
+  if (idx !== -1) {
+    entries[idx] = updated;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+  }
+}
+
+export function deleteEntry(id: string): void {
+  const entries = getEntries().filter(e => e.id !== id);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+}
+
 export function clearEntries(): void {
   localStorage.removeItem(STORAGE_KEY);
 }

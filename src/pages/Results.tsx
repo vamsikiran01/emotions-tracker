@@ -1,12 +1,11 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft, AlertTriangle, Lightbulb, Brain, TrendingUp, Database, MessageSquareQuote, Share2 } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, Lightbulb, Brain, Share2, Pencil, Trash2, Save, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { EMOTION_META } from '@/lib/emotionEngine';
-import { STATUS_META } from '@/lib/mentalHealthClassifier';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Textarea } from '@/components/ui/textarea';
+import { EMOTION_META, analyzeEmotion } from '@/lib/emotionEngine';
+import { updateEntry, deleteEntry } from '@/lib/storage';
 import type { JournalEntry } from '@/lib/storage';
 
 const intensityColor: Record<string, string> = {
@@ -28,20 +27,14 @@ const confidenceColor = (value: number) => {
   return 'bg-rose-500';
 };
 
-const statusBorderColor: Record<string, string> = {
-  Normal: 'border-l-emerald-500',
-  Depression: 'border-l-blue-500',
-  Suicidal: 'border-l-red-600',
-  Anxiety: 'border-l-amber-500',
-  Stress: 'border-l-orange-500',
-  Bipolar: 'border-l-violet-500',
-  'Personality disorder': 'border-l-pink-500',
-};
-
 const Results = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const entry = (location.state as { entry: JournalEntry } | null)?.entry;
+  const [entry, setEntry] = useState<JournalEntry | null>(
+    (location.state as { entry: JournalEntry } | null)?.entry ?? null
+  );
+  const [editing, setEditing] = useState(false);
+  const [editText, setEditText] = useState('');
 
   useEffect(() => {
     if (!entry) {
@@ -60,12 +53,74 @@ const Results = () => {
   const { result } = entry;
   const meta = EMOTION_META[result.primaryEmotion];
 
+  const handleEdit = () => {
+    setEditText(entry.text);
+    setEditing(true);
+  };
+
+  const handleSaveEdit = () => {
+    const trimmed = editText.trim();
+    if (!trimmed) return;
+    const newResult = analyzeEmotion(trimmed);
+    const updated: JournalEntry = { ...entry, text: trimmed, result: newResult };
+    updateEntry(updated);
+    setEntry(updated);
+    setEditing(false);
+  };
+
+  const handleDelete = () => {
+    if (window.confirm('Are you sure you want to delete this entry?')) {
+      deleteEntry(entry.id);
+      navigate('/');
+    }
+  };
+
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-gradient-to-br from-primary/5 via-accent/10 to-secondary/20">
       <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 max-w-2xl">
-        <Button variant="ghost" onClick={() => navigate('/')} className="mb-4 sm:mb-6 gap-2 text-muted-foreground hover:text-foreground animate-fade-slide-up stagger-1">
-          <ArrowLeft className="h-4 w-4" /> Write Another Entry
-        </Button>
+        <div className="flex items-center justify-between mb-4 sm:mb-6 animate-fade-slide-up stagger-1">
+          <Button variant="ghost" onClick={() => navigate('/')} className="gap-2 text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="h-4 w-4" /> Write Another Entry
+          </Button>
+          <div className="flex gap-1">
+            <Button variant="ghost" size="icon" onClick={handleEdit} className="text-muted-foreground hover:text-foreground" title="Edit entry">
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={handleDelete} className="text-muted-foreground hover:text-destructive" title="Delete entry">
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Edit mode */}
+        {editing && (
+          <Card className="mb-4 sm:mb-6 shadow-md border-primary/30 animate-fade-slide-up">
+            <CardContent className="p-4 sm:p-5 space-y-3">
+              <p className="text-sm font-medium text-foreground">Edit your entry</p>
+              <Textarea
+                value={editText}
+                onChange={e => setEditText(e.target.value)}
+                className="min-h-[120px] text-sm resize-none border-border bg-muted/30 focus-visible:ring-primary/30"
+              />
+              <div className="flex gap-2 justify-end">
+                <Button variant="ghost" size="sm" onClick={() => setEditing(false)} className="gap-1">
+                  <X className="h-3.5 w-3.5" /> Cancel
+                </Button>
+                <Button size="sm" onClick={handleSaveEdit} disabled={!editText.trim()} className="gap-1">
+                  <Save className="h-3.5 w-3.5" /> Save & Re-analyze
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Original text preview */}
+        <Card className="mb-4 sm:mb-6 shadow-sm border-border/50 animate-fade-slide-up stagger-1">
+          <CardContent className="p-4">
+            <p className="text-xs text-muted-foreground mb-1">Your entry</p>
+            <p className="text-sm text-foreground leading-relaxed">"{entry.text}"</p>
+          </CardContent>
+        </Card>
 
         {/* Safety Alert */}
         {result.safetyAlert && (
@@ -112,24 +167,6 @@ const Results = () => {
           </CardContent>
         </Card>
 
-        {/* Keywords */}
-        <Card className="mb-4 sm:mb-6 shadow-md border-border/50 animate-fade-slide-up stagger-3">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm sm:text-base flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-primary" /> Emotional Keywords
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="flex flex-wrap gap-2">
-              {result.keywords.map((kw, i) => (
-                <Badge key={i} variant="secondary" className="text-xs sm:text-sm px-3 py-1">
-                  {kw}
-                </Badge>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
         {/* AI Insight */}
         <Card className="mb-4 sm:mb-6 shadow-md border-border/50 animate-fade-slide-up stagger-4">
           <CardHeader className="pb-3">
@@ -141,64 +178,6 @@ const Results = () => {
             <p className="text-xs sm:text-sm leading-relaxed text-muted-foreground italic">"{result.insight}"</p>
           </CardContent>
         </Card>
-
-        {/* Mental Health Pattern */}
-        {result.mentalHealthStatus && (() => {
-          const mh = result.mentalHealthStatus;
-          const statusMeta = STATUS_META[mh.status];
-          const borderClass = statusBorderColor[mh.status] || 'border-l-muted';
-          return (
-            <Card className={`mb-4 sm:mb-6 shadow-md border-border/50 border-l-4 ${borderClass} animate-fade-slide-up stagger-5`}>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm sm:text-base flex items-center gap-2">
-                  <Database className="h-4 w-4 text-primary" /> Mental Health Pattern
-                  <span className="text-[10px] font-normal text-muted-foreground ml-auto hidden sm:inline">Based on Kaggle Mental Health Dataset</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0 space-y-4">
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl sm:text-3xl">{statusMeta.emoji}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-foreground text-sm sm:text-base">{statusMeta.label}</p>
-                    <p className="text-xs text-muted-foreground line-clamp-2">{mh.explanation}</p>
-                  </div>
-                  <Badge variant="outline" className="text-xs shrink-0">{mh.confidence}%</Badge>
-                </div>
-
-                <div>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-muted-foreground">Confidence</span>
-                    <span className="font-medium text-foreground">{mh.confidence}%</span>
-                  </div>
-                  <div className="relative h-2 w-full overflow-hidden rounded-full bg-secondary">
-                    <div
-                      className={`h-full rounded-full transition-all duration-700 ease-out ${confidenceColor(mh.confidence)}`}
-                      style={{ width: `${mh.confidence}%` }}
-                    />
-                  </div>
-                </div>
-
-                {mh.sampleStatements.length > 0 && (
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
-                      <MessageSquareQuote className="h-3 w-3" /> Similar entries from dataset
-                    </p>
-                    <div className="space-y-2">
-                      {mh.sampleStatements.slice(0, 2).map((s, i) => (
-                        <p key={i} className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-2.5 italic border border-border/30">"{s}"</p>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-              <CardFooter className="pt-0 pb-3 px-6">
-                <p className="text-[10px] text-muted-foreground/60 italic">
-                  This is a pattern-based estimate, not a clinical diagnosis. Please consult a professional for medical advice.
-                </p>
-              </CardFooter>
-            </Card>
-          );
-        })()}
 
         {/* Suggestions */}
         <Card className="shadow-md border-border/50 animate-fade-slide-up stagger-6">
