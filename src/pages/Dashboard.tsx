@@ -187,7 +187,7 @@ const Dashboard = () => {
             <h2 className="text-lg font-semibold text-foreground mb-4">Past Entries</h2>
             <div className="space-y-3">
               {entries.map(entry => {
-                const meta = EMOTION_META[entry.result.primaryEmotion];
+                const meta = EMOTION_META[entry.result?.primaryEmotion] ?? { emoji: '❓', color: 'hsl(0,0%,50%)', label: 'Unknown' };
                 const isEditing = editingId === entry.id;
                 return (
                   <Card key={entry.id} className="shadow-sm border-border/50 hover:shadow-md transition-shadow">
