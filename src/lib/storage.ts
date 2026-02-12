@@ -1,3 +1,4 @@
+import { supabase } from '@/integrations/supabase/client';
 import { EmotionResult, EmotionType } from './emotionEngine';
 
 export interface JournalEntry {
@@ -7,41 +8,73 @@ export interface JournalEntry {
   result: EmotionResult;
 }
 
-const STORAGE_KEY = 'emotion-journal-entries';
+export async function getEntries(): Promise<JournalEntry[]> {
+  const { data, error } = await supabase
+    .from('journal_entries')
+    .select('*')
+    .order('created_at', { ascending: false });
 
-export function getEntries(): JournalEntry[] {
-  try {
-    const data = localStorage.getItem(STORAGE_KEY);
-    return data ? JSON.parse(data) : [];
-  } catch {
+  if (error) {
+    console.error('Error fetching entries:', error);
     return [];
   }
+
+  return (data || []).map(row => ({
+    id: row.id,
+    date: row.created_at,
+    text: row.text,
+    result: row.result as unknown as EmotionResult,
+  }));
 }
 
-export function saveEntry(entry: JournalEntry): void {
-  const entries = getEntries();
-  entries.unshift(entry);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+export async function saveEntry(entry: JournalEntry): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const { error } = await supabase.from('journal_entries').insert({
+    user_id: user.id,
+    text: entry.text,
+    result: entry.result as any,
+    created_at: entry.date,
+  });
+
+  if (error) console.error('Error saving entry:', error);
 }
 
-export function updateEntry(updated: JournalEntry): void {
-  const entries = getEntries();
-  const idx = entries.findIndex(e => e.id === updated.id);
-  if (idx !== -1) {
-    entries[idx] = updated;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
-  }
+export async function updateEntry(updated: JournalEntry): Promise<void> {
+  const { error } = await supabase
+    .from('journal_entries')
+    .update({
+      text: updated.text,
+      result: updated.result as any,
+    })
+    .eq('id', updated.id);
+
+  if (error) console.error('Error updating entry:', error);
 }
 
-export function deleteEntry(id: string): void {
-  const entries = getEntries().filter(e => e.id !== id);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+export async function deleteEntry(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('journal_entries')
+    .delete()
+    .eq('id', id);
+
+  if (error) console.error('Error deleting entry:', error);
 }
 
-export function clearEntries(): void {
-  localStorage.removeItem(STORAGE_KEY);
+export async function clearEntries(): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const { error } = await supabase
+    .from('journal_entries')
+    .delete()
+    .eq('user_id', user.id);
+
+  if (error) console.error('Error clearing entries:', error);
 }
 
+// These utility functions remain synchronous as they operate on already-fetched data
 export function getWeeklyDominantEmotion(entries: JournalEntry[]): EmotionType | null {
   const now = new Date();
   const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -78,7 +111,6 @@ export function getStabilityScore(entries: JournalEntry[]): number {
   const emotions = recent.map(e => e.result.primaryEmotion);
   const unique = new Set(emotions).size;
   const ratio = unique / emotions.length;
-  // Lower variance = higher stability
   return Math.round(Math.max(20, Math.min(100, (1 - ratio * 0.8) * 100)));
 }
 

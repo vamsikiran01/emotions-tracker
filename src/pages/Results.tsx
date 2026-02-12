@@ -58,19 +58,19 @@ const Results = () => {
     setEditing(true);
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     const trimmed = editText.trim();
     if (!trimmed) return;
     const newResult = analyzeEmotion(trimmed);
     const updated: JournalEntry = { ...entry, text: trimmed, result: newResult };
-    updateEntry(updated);
+    await updateEntry(updated);
     setEntry(updated);
     setEditing(false);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (window.confirm('Are you sure you want to delete this entry?')) {
-      deleteEntry(entry.id);
+      await deleteEntry(entry.id);
       navigate('/');
     }
   };
