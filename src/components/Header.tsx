@@ -1,16 +1,13 @@
 import { useState } from 'react';
-import { Moon, Sun, BookHeart, Menu, X, LogOut } from 'lucide-react';
+import { Moon, Sun, BookHeart, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { NavLink } from 'react-router-dom';
 import { useTheme } from '@/hooks/useTheme';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useAuth } from '@/hooks/useAuth';
 
 const navItems = [
   { to: '/', label: 'Journal' },
   { to: '/dashboard', label: 'Dashboard' },
-  { to: '/dataset', label: 'Dataset' },
-  { to: '/install', label: 'Install App' },
 ];
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
@@ -20,7 +17,6 @@ const Header = () => {
   const { isDark, toggle } = useTheme();
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
-  const { signOut } = useAuth();
 
   return (
     <header className="sticky top-0 z-50 backdrop-blur-md bg-background/80 border-b border-border/50">
@@ -41,9 +37,6 @@ const Header = () => {
             ))}
             <Button variant="ghost" size="icon" onClick={toggle} className="ml-2">
               {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-            </Button>
-            <Button variant="ghost" size="icon" onClick={signOut} className="ml-1 text-muted-foreground hover:text-destructive" title="Sign out">
-              <LogOut className="h-5 w-5" />
             </Button>
           </nav>
         )}
@@ -69,9 +62,6 @@ const Header = () => {
               {item.label}
             </NavLink>
           ))}
-          <Button variant="ghost" size="sm" onClick={() => { setOpen(false); signOut(); }} className="justify-start gap-2 text-muted-foreground hover:text-destructive w-full">
-            <LogOut className="h-4 w-4" /> Sign Out
-          </Button>
         </nav>
       )}
     </header>
