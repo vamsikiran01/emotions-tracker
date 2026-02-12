@@ -3,6 +3,7 @@ export type SentimentType = 'Positive' | 'Negative' | 'Neutral' | 'Mixed';
 export type IntensityLevel = 'Low' | 'Medium' | 'High';
 
 import { classifyMentalHealth, type MentalHealthResult } from './mentalHealthClassifier';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface EmotionResult {
   primaryEmotion: EmotionType;
@@ -278,6 +279,41 @@ export function analyzeEmotion(text: string): EmotionResult {
     safetyMessage: safety.message,
     mentalHealthStatus,
   };
+}
+
+export async function analyzeEmotionWithAI(text: string): Promise<EmotionResult> {
+  try {
+    const { data, error } = await supabase.functions.invoke('analyze-emotion', {
+      body: { text },
+    });
+
+    if (error) throw error;
+    if (!data || !data.primaryEmotion) throw new Error('Invalid AI response');
+
+    const validEmotions: EmotionType[] = ['happy', 'sad', 'angry', 'fear', 'surprise', 'love', 'anxious'];
+    if (!validEmotions.includes(data.primaryEmotion)) throw new Error('Invalid emotion type');
+
+    return {
+      primaryEmotion: data.primaryEmotion as EmotionType,
+      confidence: Math.max(55, Math.min(98, data.confidence ?? 75)),
+      sentiment: data.sentiment as SentimentType,
+      keywords: [],
+      intensity: data.intensity as IntensityLevel,
+      insight: data.insight ?? '',
+      suggestions: Array.isArray(data.suggestions) ? data.suggestions.slice(0, 3) : [],
+      safetyAlert: data.safetyAlert ?? false,
+      safetyMessage: data.safetyMessage,
+      mentalHealthStatus: data.mentalHealthClassification ? {
+        status: data.mentalHealthClassification as MentalHealthResult['status'],
+        confidence: data.mentalHealthConfidence ?? 70,
+        explanation: data.insight ?? '',
+        sampleStatements: [],
+      } : undefined,
+    };
+  } catch (err) {
+    console.warn('AI analysis failed, falling back to keyword engine:', err);
+    return analyzeEmotion(text);
+  }
 }
 
 export const AFFIRMATIONS = [

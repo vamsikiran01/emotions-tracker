@@ -4,7 +4,7 @@ import { ArrowLeft, AlertTriangle, Lightbulb, Brain, Share2, Pencil, Trash2, Sav
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { EMOTION_META, analyzeEmotion } from '@/lib/emotionEngine';
+import { EMOTION_META, analyzeEmotionWithAI } from '@/lib/emotionEngine';
 import { updateEntry, deleteEntry } from '@/lib/storage';
 import type { JournalEntry } from '@/lib/storage';
 
@@ -61,7 +61,7 @@ const Results = () => {
   const handleSaveEdit = async () => {
     const trimmed = editText.trim();
     if (!trimmed) return;
-    const newResult = analyzeEmotion(trimmed);
+    const newResult = await analyzeEmotionWithAI(trimmed);
     const updated: JournalEntry = { ...entry, text: trimmed, result: newResult };
     await updateEntry(updated);
     setEntry(updated);

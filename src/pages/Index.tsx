@@ -4,7 +4,7 @@ import { Sparkles, Loader2, PenLine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
-import { analyzeEmotion, AFFIRMATIONS } from '@/lib/emotionEngine';
+import { analyzeEmotionWithAI, AFFIRMATIONS } from '@/lib/emotionEngine';
 import { saveEntry, JournalEntry } from '@/lib/storage';
 import { useMemo } from 'react';
 
@@ -23,17 +23,19 @@ const Index = () => {
   const handleAnalyze = async () => {
     if (!text.trim()) return;
     setAnalyzing(true);
-    await new Promise(r => setTimeout(r, 1500 + Math.random() * 1000));
-    const result = analyzeEmotion(text);
-    const entry: JournalEntry = {
-      id: crypto.randomUUID(),
-      date: new Date().toISOString(),
-      text: text.trim(),
-      result,
-    };
-    await saveEntry(entry);
-    setAnalyzing(false);
-    navigate('/results', { state: { entry } });
+    try {
+      const result = await analyzeEmotionWithAI(text);
+      const entry: JournalEntry = {
+        id: crypto.randomUUID(),
+        date: new Date().toISOString(),
+        text: text.trim(),
+        result,
+      };
+      await saveEntry(entry);
+      navigate('/results', { state: { entry } });
+    } finally {
+      setAnalyzing(false);
+    }
   };
 
   return (
