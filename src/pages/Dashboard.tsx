@@ -1,12 +1,12 @@
-import { useMemo } from 'react';
-import { Flame, Shield, TrendingUp, BarChart3, CalendarDays, Trash2 } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Flame, Shield, TrendingUp, BarChart3, CalendarDays, Trash2, Database } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { getEntries, getWeeklyDominantEmotion, getEmotionDistribution, getStabilityScore, getStreak, clearEntries } from '@/lib/storage';
 import { EMOTION_META } from '@/lib/emotionEngine';
-import { useState } from 'react';
+import { STATUS_META, type MentalHealthStatus } from '@/lib/mentalHealthClassifier';
 
 const Dashboard = () => {
   const [entries, setEntries] = useState(() => getEntries());
@@ -15,6 +15,21 @@ const Dashboard = () => {
   const distribution = useMemo(() => getEmotionDistribution(entries), [entries]);
   const stability = useMemo(() => getStabilityScore(entries), [entries]);
   const streak = useMemo(() => getStreak(entries), [entries]);
+
+  const mentalHealthDistribution = useMemo(() => {
+    const counts: Record<string, number> = {};
+    entries.forEach(e => {
+      const status = e.result.mentalHealthStatus?.status;
+      if (status) {
+        counts[status] = (counts[status] || 0) + 1;
+      }
+    });
+    return Object.entries(counts).map(([status, count]) => ({
+      status: STATUS_META[status as MentalHealthStatus]?.label || status,
+      count,
+      fill: STATUS_META[status as MentalHealthStatus]?.color || 'hsl(220, 15%, 55%)',
+    }));
+  }, [entries]);
 
   const handleClear = () => {
     if (confirm('Are you sure you want to delete all journal entries? This cannot be undone.')) {
@@ -102,6 +117,37 @@ const Dashboard = () => {
                         />
                         <Bar dataKey="count" radius={[6, 6, 0, 0]}>
                           {distribution.map((d, i) => (
+                            <Cell key={i} fill={d.fill} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Mental Health Distribution */}
+            {mentalHealthDistribution.length > 0 && (
+              <Card className="mb-8 shadow-md border-border/50">
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Database className="h-4 w-4 text-primary" /> Mental Health Pattern Distribution
+                    <span className="text-[10px] font-normal text-muted-foreground ml-auto">Kaggle Dataset-Aligned</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={mentalHealthDistribution}>
+                        <XAxis dataKey="status" tick={{ fontSize: 11 }} />
+                        <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                        <Tooltip
+                          contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))', background: 'hsl(var(--card))' }}
+                          labelStyle={{ fontWeight: 600 }}
+                        />
+                        <Bar dataKey="count" radius={[6, 6, 0, 0]}>
+                          {mentalHealthDistribution.map((d, i) => (
                             <Cell key={i} fill={d.fill} />
                           ))}
                         </Bar>

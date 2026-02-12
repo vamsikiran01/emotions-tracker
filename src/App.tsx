@@ -7,6 +7,7 @@ import Header from "./components/Header";
 import Index from "./pages/Index";
 import Results from "./pages/Results";
 import Dashboard from "./pages/Dashboard";
+import DatasetUpload from "./pages/DatasetUpload";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +23,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/results" element={<Results />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/dataset" element={<DatasetUpload />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

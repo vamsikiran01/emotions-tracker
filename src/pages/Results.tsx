@@ -1,10 +1,11 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft, AlertTriangle, Lightbulb, Brain, TrendingUp } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, Lightbulb, Brain, TrendingUp, Database, MessageSquareQuote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { EMOTION_META } from '@/lib/emotionEngine';
+import { STATUS_META } from '@/lib/mentalHealthClassifier';
 import type { JournalEntry } from '@/lib/storage';
 
 const intensityColor: Record<string, string> = {
@@ -106,6 +107,53 @@ const Results = () => {
             <p className="text-sm leading-relaxed text-muted-foreground italic">"{result.insight}"</p>
           </CardContent>
         </Card>
+
+        {/* Mental Health Pattern (Dataset-Aligned) */}
+        {result.mentalHealthStatus && (() => {
+          const mh = result.mentalHealthStatus;
+          const statusMeta = STATUS_META[mh.status];
+          return (
+            <Card className="mb-6 shadow-md border-border/50">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Database className="h-4 w-4 text-primary" /> Mental Health Pattern
+                  <span className="text-[10px] font-normal text-muted-foreground ml-auto">Based on Kaggle Mental Health Dataset</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0 space-y-4">
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl">{statusMeta.emoji}</span>
+                  <div className="flex-1">
+                    <p className="font-semibold text-foreground">{statusMeta.label}</p>
+                    <p className="text-xs text-muted-foreground">{mh.explanation}</p>
+                  </div>
+                  <Badge variant="outline" className="text-xs">{mh.confidence}%</Badge>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-muted-foreground">Confidence</span>
+                    <span className="font-medium text-foreground">{mh.confidence}%</span>
+                  </div>
+                  <Progress value={mh.confidence} className="h-2" />
+                </div>
+
+                {mh.sampleStatements.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
+                      <MessageSquareQuote className="h-3 w-3" /> Similar entries from dataset
+                    </p>
+                    <div className="space-y-2">
+                      {mh.sampleStatements.slice(0, 2).map((s, i) => (
+                        <p key={i} className="text-xs text-muted-foreground bg-muted/40 rounded-lg p-2.5 italic">"{s}"</p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })()}
 
         {/* Suggestions */}
         <Card className="shadow-md border-border/50">
