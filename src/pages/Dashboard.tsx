@@ -1,18 +1,26 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Flame, Shield, TrendingUp, BarChart3, CalendarDays, Trash2, Database, Pencil, Save, X } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { getEntries, getWeeklyDominantEmotion, getEmotionDistribution, getStabilityScore, getStreak, clearEntries, updateEntry, deleteEntry } from '@/lib/storage';
+import { getEntries, getWeeklyDominantEmotion, getEmotionDistribution, getStabilityScore, getStreak, clearEntries, updateEntry, deleteEntry, JournalEntry } from '@/lib/storage';
 import { EMOTION_META, analyzeEmotion } from '@/lib/emotionEngine';
 import { STATUS_META, type MentalHealthStatus } from '@/lib/mentalHealthClassifier';
 
 const Dashboard = () => {
-  const [entries, setEntries] = useState(() => getEntries());
+  const [entries, setEntries] = useState<JournalEntry[]>([]);
+  const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
+
+  useEffect(() => {
+    getEntries().then(data => {
+      setEntries(data);
+      setLoading(false);
+    });
+  }, []);
 
   const weeklyEmotion = useMemo(() => getWeeklyDominantEmotion(entries), [entries]);
   const distribution = useMemo(() => getEmotionDistribution(entries), [entries]);
@@ -34,34 +42,42 @@ const Dashboard = () => {
     }));
   }, [entries]);
 
-  const handleClear = () => {
+  const handleClear = async () => {
     if (confirm('Are you sure you want to delete all journal entries? This cannot be undone.')) {
-      clearEntries();
+      await clearEntries();
       setEntries([]);
     }
   };
 
-  const handleEditStart = (entry: typeof entries[0]) => {
+  const handleEditStart = (entry: JournalEntry) => {
     setEditingId(entry.id);
     setEditText(entry.text);
   };
 
-  const handleEditSave = (entry: typeof entries[0]) => {
+  const handleEditSave = async (entry: JournalEntry) => {
     const trimmed = editText.trim();
     if (!trimmed) return;
     const newResult = analyzeEmotion(trimmed);
     const updated = { ...entry, text: trimmed, result: newResult };
-    updateEntry(updated);
+    await updateEntry(updated);
     setEntries(prev => prev.map(e => e.id === entry.id ? updated : e));
     setEditingId(null);
   };
 
-  const handleDeleteEntry = (id: string) => {
+  const handleDeleteEntry = async (id: string) => {
     if (confirm('Delete this entry?')) {
-      deleteEntry(id);
+      await deleteEntry(id);
       setEntries(prev => prev.filter(e => e.id !== id));
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-gradient-to-br from-primary/5 via-accent/10 to-secondary/20">

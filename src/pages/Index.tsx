@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sparkles, Loader2, PenLine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { analyzeEmotion, AFFIRMATIONS } from '@/lib/emotionEngine';
 import { saveEntry, JournalEntry } from '@/lib/storage';
+import { useMemo } from 'react';
 
 const Index = () => {
   const [text, setText] = useState('');
@@ -22,7 +23,6 @@ const Index = () => {
   const handleAnalyze = async () => {
     if (!text.trim()) return;
     setAnalyzing(true);
-    // Simulate processing delay
     await new Promise(r => setTimeout(r, 1500 + Math.random() * 1000));
     const result = analyzeEmotion(text);
     const entry: JournalEntry = {
@@ -31,7 +31,7 @@ const Index = () => {
       text: text.trim(),
       result,
     };
-    saveEntry(entry);
+    await saveEntry(entry);
     setAnalyzing(false);
     navigate('/results', { state: { entry } });
   };
@@ -93,7 +93,7 @@ const Index = () => {
         </Card>
 
         <p className="text-center text-xs text-muted-foreground mt-6">
-          Your journal entries are stored locally on your device. Your privacy is our priority. 🔒
+          Your journal entries are securely stored in the cloud. 🔒
         </p>
       </div>
     </div>
