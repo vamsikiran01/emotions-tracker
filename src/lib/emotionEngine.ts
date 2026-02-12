@@ -2,6 +2,8 @@ export type EmotionType = 'happy' | 'sad' | 'angry' | 'fear' | 'surprise' | 'lov
 export type SentimentType = 'Positive' | 'Negative' | 'Neutral' | 'Mixed';
 export type IntensityLevel = 'Low' | 'Medium' | 'High';
 
+import { classifyMentalHealth, type MentalHealthResult } from './mentalHealthClassifier';
+
 export interface EmotionResult {
   primaryEmotion: EmotionType;
   confidence: number;
@@ -12,6 +14,7 @@ export interface EmotionResult {
   suggestions: string[];
   safetyAlert: boolean;
   safetyMessage?: string;
+  mentalHealthStatus?: MentalHealthResult;
 }
 
 export const EMOTION_META: Record<EmotionType, { emoji: string; color: string; label: string }> = {
@@ -252,6 +255,9 @@ export function analyzeEmotion(text: string): EmotionResult {
   // Safety
   const safety = detectSafety(text);
 
+  // Mental health classification
+  const mentalHealthStatus = classifyMentalHealth(text);
+
   return {
     primaryEmotion,
     confidence,
@@ -262,6 +268,7 @@ export function analyzeEmotion(text: string): EmotionResult {
     suggestions,
     safetyAlert: safety.alert,
     safetyMessage: safety.message,
+    mentalHealthStatus,
   };
 }
 
