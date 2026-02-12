@@ -34,32 +34,32 @@ const KEYWORD_MAP: Record<EmotionType, { words: string[]; weight: number }[]> = 
     { words: ['good', 'nice', 'well', 'fine', 'okay', 'better', 'awesome', 'cool', 'sweet', 'yay'], weight: 0.6 },
   ],
   sad: [
-    { words: ['sad', 'depressed', 'unhappy', 'miserable', 'heartbroken', 'devastated', 'grief', 'mourning', 'loss', 'cry', 'crying', 'tears', 'lonely', 'alone', 'empty', 'hopeless', 'despair', 'sorrow', 'melancholy', 'gloomy', 'down', 'blue', 'broken', 'hurt', 'pain', 'suffering', 'tired', 'exhausted', 'drained', 'numb'], weight: 1.0 },
-    { words: ['miss', 'missing', 'wish', 'regret', 'sorry', 'disappointed', 'unfortunate', 'heavy'], weight: 0.6 },
+    { words: ['sad', 'depressed', 'unhappy', 'miserable', 'heartbroken', 'devastated', 'grief', 'mourning', 'loss', 'cry', 'crying', 'tears', 'lonely', 'alone', 'empty', 'hopeless', 'despair', 'sorrow', 'melancholy', 'gloomy', 'down', 'blue', 'broken', 'hurt', 'pain', 'suffering', 'tired', 'exhausted', 'drained', 'numb', 'difficult', 'accident', 'shook', 'wrong', 'recover', 'worse', 'bad day', 'tough', 'hard day', 'rough', 'terrible day', 'awful day', 'struggling'], weight: 1.0 },
+    { words: ['miss', 'missing', 'wish', 'regret', 'sorry', 'disappointed', 'unfortunate', 'heavy', 'wasn\'t a good day', 'not a good day', 'hope tomorrow', 'rest and recover'], weight: 0.6 },
   ],
   angry: [
     { words: ['angry', 'furious', 'rage', 'mad', 'annoyed', 'irritated', 'frustrated', 'hate', 'disgusted', 'outraged', 'livid', 'hostile', 'aggressive', 'bitter', 'resentful', 'enraged', 'infuriated', 'seething', 'fuming'], weight: 1.0 },
     { words: ['unfair', 'stupid', 'ridiculous', 'terrible', 'worst', 'awful', 'toxic', 'betrayed'], weight: 0.6 },
   ],
   fear: [
-    { words: ['afraid', 'scared', 'terrified', 'frightened', 'panic', 'horror', 'dread', 'phobia', 'nightmare', 'alarmed', 'petrified', 'trembling', 'shaking', 'haunted', 'threatened'], weight: 1.0 },
-    { words: ['danger', 'risky', 'uncertain', 'unknown', 'dark', 'creepy', 'eerie', 'unsafe'], weight: 0.6 },
+    { words: ['afraid', 'scared', 'terrified', 'frightened', 'panic', 'horror', 'dread', 'phobia', 'nightmare', 'alarmed', 'petrified', 'trembling', 'shaking', 'haunted', 'threatened', 'uneasy', 'shook', 'shocking'], weight: 1.0 },
+    { words: ['danger', 'risky', 'uncertain', 'unknown', 'dark', 'creepy', 'eerie', 'unsafe', 'not in our control', 'went wrong', 'things went wrong'], weight: 0.6 },
   ],
   surprise: [
     { words: ['surprised', 'shocked', 'amazed', 'astonished', 'stunned', 'unexpected', 'unbelievable', 'incredible', 'wow', 'whoa', 'speechless', 'bewildered', 'startled'], weight: 1.0 },
-    { words: ['suddenly', 'never expected', 'out of nowhere', 'plot twist', 'jaw dropped'], weight: 0.6 },
+    { words: ['suddenly', 'never expected', 'out of nowhere', 'plot twist', 'jaw dropped', 'so quickly', 'one moment'], weight: 0.6 },
   ],
   love: [
     { words: ['love', 'adore', 'cherish', 'affection', 'romance', 'passionate', 'intimate', 'devotion', 'sweetheart', 'darling', 'beloved', 'crush', 'soulmate', 'heart', 'caring', 'tender', 'warmth', 'embrace', 'kiss', 'hug'], weight: 1.0 },
     { words: ['appreciate', 'admire', 'fond', 'close', 'bond', 'connection', 'special', 'treasure'], weight: 0.6 },
   ],
   neutral: [
-    { words: ['okay', 'fine', 'normal', 'regular', 'usual', 'routine', 'ordinary', 'standard', 'typical', 'average', 'moderate', 'balanced', 'calm', 'steady', 'stable'], weight: 1.0 },
-    { words: ['today', 'went', 'did', 'was', 'had', 'made', 'just', 'some', 'nothing special'], weight: 0.3 },
+    { words: ['okay', 'fine', 'regular', 'usual', 'routine', 'ordinary', 'standard', 'typical', 'average', 'moderate', 'balanced', 'steady', 'stable'], weight: 1.0 },
+    { words: ['just', 'some', 'nothing special'], weight: 0.3 },
   ],
   anxious: [
-    { words: ['anxious', 'anxiety', 'worried', 'nervous', 'stress', 'stressed', 'tense', 'restless', 'uneasy', 'overwhelmed', 'overthinking', 'racing thoughts', 'cant sleep', 'insomnia', 'pressure', 'burden', 'suffocating', 'panic attack', 'chest tight', 'breathing'], weight: 1.0 },
-    { words: ['what if', 'concern', 'doubt', 'uncertain', 'deadline', 'too much', 'cant handle', 'struggling'], weight: 0.6 },
+    { words: ['anxious', 'anxiety', 'worried', 'nervous', 'stress', 'stressed', 'tense', 'restless', 'uneasy', 'overwhelmed', 'overthinking', 'racing thoughts', 'cant sleep', 'insomnia', 'pressure', 'burden', 'suffocating', 'panic attack', 'chest tight', 'breathing', 'replaying'], weight: 1.0 },
+    { words: ['what if', 'concern', 'doubt', 'uncertain', 'deadline', 'too much', 'cant handle', 'struggling', 'keep replaying'], weight: 0.6 },
   ],
 };
 
