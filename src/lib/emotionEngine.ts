@@ -1,4 +1,4 @@
-export type EmotionType = 'happy' | 'sad' | 'angry' | 'fear' | 'surprise' | 'love' | 'neutral' | 'anxious';
+export type EmotionType = 'happy' | 'sad' | 'angry' | 'fear' | 'surprise' | 'love' | 'anxious';
 export type SentimentType = 'Positive' | 'Negative' | 'Neutral' | 'Mixed';
 export type IntensityLevel = 'Low' | 'Medium' | 'High';
 
@@ -24,7 +24,6 @@ export const EMOTION_META: Record<EmotionType, { emoji: string; color: string; l
   fear: { emoji: '😨', color: 'var(--emotion-fear)', label: 'Fear' },
   surprise: { emoji: '😲', color: 'var(--emotion-surprise)', label: 'Surprise' },
   love: { emoji: '❤️', color: 'var(--emotion-love)', label: 'Love' },
-  neutral: { emoji: '😐', color: 'var(--emotion-neutral)', label: 'Neutral' },
   anxious: { emoji: '😰', color: 'var(--emotion-anxious)', label: 'Anxious' },
 };
 
@@ -52,10 +51,6 @@ const KEYWORD_MAP: Record<EmotionType, { words: string[]; weight: number }[]> = 
   love: [
     { words: ['love', 'adore', 'cherish', 'affection', 'romance', 'passionate', 'intimate', 'devotion', 'sweetheart', 'darling', 'beloved', 'crush', 'soulmate', 'heart', 'caring', 'tender', 'warmth', 'embrace', 'kiss', 'hug'], weight: 1.0 },
     { words: ['appreciate', 'admire', 'fond', 'close', 'bond', 'connection', 'special', 'treasure'], weight: 0.6 },
-  ],
-  neutral: [
-    { words: ['okay', 'fine', 'regular', 'usual', 'routine', 'ordinary', 'standard', 'typical', 'average', 'moderate', 'balanced', 'steady', 'stable'], weight: 1.0 },
-    { words: ['just', 'some', 'nothing special'], weight: 0.3 },
   ],
   anxious: [
     { words: ['anxious', 'anxiety', 'worried', 'nervous', 'stress', 'stressed', 'tense', 'restless', 'uneasy', 'overwhelmed', 'overthinking', 'racing thoughts', 'cant sleep', 'insomnia', 'pressure', 'burden', 'suffocating', 'panic attack', 'chest tight', 'breathing', 'replaying'], weight: 1.0 },
@@ -101,11 +96,6 @@ const INSIGHTS: Record<EmotionType, string[]> = {
     "There's a beautiful tenderness in your words. Love in all its forms is one of the most healing emotions we can experience.",
     "Your writing radiates genuine care and connection. These feelings of love are precious and worth nurturing.",
   ],
-  neutral: [
-    "Your entry reflects a balanced and grounded emotional state. This equilibrium is valuable and shows emotional stability.",
-    "Your writing has a calm, reflective quality. Being in a neutral space can be a great foundation for mindful self-reflection.",
-    "There's a steady, measured tone in your words. This emotional balance provides clarity for thoughtful decision-making.",
-  ],
   anxious: [
     "Your entry reveals significant worry and mental tension. The anxious thoughts you're experiencing can feel overwhelming, but they are manageable.",
     "There's a restless energy in your words that suggests your mind is racing. Anxiety often amplifies our concerns beyond their actual scope.",
@@ -150,12 +140,6 @@ const SUGGESTIONS: Record<EmotionType, string[]> = {
     "📝 Reflect on what love means to you and how it enriches your daily life",
     "🌷 Nurture this feeling by planning a meaningful gesture for someone special",
   ],
-  neutral: [
-    "🪞 Use this balanced moment for self-reflection — what are your current goals?",
-    "🧘 Try a 5-minute mindfulness meditation to deepen your present-moment awareness",
-    "📚 Read something inspiring or learn something new while you're in this calm state",
-    "🎯 Set an intention for the rest of your day — neutral states are perfect for planning",
-  ],
   anxious: [
     "🫁 Practice the 4-7-8 breathing technique: inhale 4s, hold 7s, exhale 8s — repeat 4 times",
     "📋 Break overwhelming tasks into tiny, manageable steps — tackle just the first one",
@@ -184,10 +168,10 @@ export function analyzeEmotion(text: string): EmotionResult {
   const tokens = tokenize(text);
   const lower = text.toLowerCase();
   const scores: Record<EmotionType, number> = {
-    happy: 0, sad: 0, angry: 0, fear: 0, surprise: 0, love: 0, neutral: 0, anxious: 0,
+    happy: 0, sad: 0, angry: 0, fear: 0, surprise: 0, love: 0, anxious: 0,
   };
   const matchedKeywords: Record<EmotionType, string[]> = {
-    happy: [], sad: [], angry: [], fear: [], surprise: [], love: [], neutral: [], anxious: [],
+    happy: [], sad: [], angry: [], fear: [], surprise: [], love: [], anxious: [],
   };
 
   for (const [emotion, groups] of Object.entries(KEYWORD_MAP) as [EmotionType, typeof KEYWORD_MAP[EmotionType]][]) {
@@ -206,10 +190,10 @@ export function analyzeEmotion(text: string): EmotionResult {
     }
   }
 
-  // Default to neutral if no strong signals
+  // Default to happy (calm/content) if no strong signals
   const totalScore = Object.values(scores).reduce((a, b) => a + b, 0);
   if (totalScore < 1) {
-    scores.neutral += 2;
+    scores.happy += 2;
   }
 
   // Find primary emotion
