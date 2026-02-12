@@ -33,12 +33,12 @@ const KEYWORD_MAP: Record<EmotionType, { words: string[]; weight: number }[]> = 
     { words: ['good', 'nice', 'well', 'fine', 'okay', 'better', 'awesome', 'cool', 'sweet', 'yay'], weight: 0.6 },
   ],
   sad: [
-    { words: ['sad', 'depressed', 'unhappy', 'miserable', 'heartbroken', 'devastated', 'grief', 'mourning', 'loss', 'cry', 'crying', 'tears', 'lonely', 'alone', 'empty', 'hopeless', 'despair', 'sorrow', 'melancholy', 'gloomy', 'down', 'blue', 'broken', 'hurt', 'pain', 'suffering', 'tired', 'exhausted', 'drained', 'numb', 'difficult', 'accident', 'shook', 'wrong', 'recover', 'worse', 'bad day', 'tough', 'hard day', 'rough', 'terrible day', 'awful day', 'struggling'], weight: 1.0 },
-    { words: ['miss', 'missing', 'wish', 'regret', 'sorry', 'disappointed', 'unfortunate', 'heavy', 'wasn\'t a good day', 'not a good day', 'hope tomorrow', 'rest and recover'], weight: 0.6 },
+    { words: ['sad', 'depressed', 'unhappy', 'miserable', 'heartbroken', 'devastated', 'grief', 'mourning', 'loss', 'cry', 'crying', 'tears', 'lonely', 'alone', 'empty', 'hopeless', 'despair', 'sorrow', 'melancholy', 'gloomy', 'down', 'blue', 'broken', 'hurt', 'pain', 'suffering', 'tired', 'exhausted', 'drained', 'numb', 'difficult', 'accident', 'shook', 'wrong', 'recover', 'worse', 'bad day', 'tough', 'hard day', 'rough', 'terrible day', 'awful day', 'struggling', 'blood', 'scolded', 'unappreciated', 'ignored', 'rejected', 'criticized', 'unloved', 'unseen', 'unheard', 'worthless', 'invisible', 'forgotten'], weight: 1.0 },
+    { words: ['miss', 'missing', 'wish', 'regret', 'sorry', 'disappointed', 'unfortunate', 'heavy', 'wasn\'t a good day', 'not a good day', 'hope tomorrow', 'rest and recover', 'no one cares', "doesn't matter", 'not enough', 'never enough', 'taken for granted', 'wasted effort'], weight: 0.6 },
   ],
   angry: [
     { words: ['angry', 'furious', 'rage', 'mad', 'annoyed', 'irritated', 'frustrated', 'hate', 'disgusted', 'outraged', 'livid', 'hostile', 'aggressive', 'bitter', 'resentful', 'enraged', 'infuriated', 'seething', 'fuming'], weight: 1.0 },
-    { words: ['unfair', 'stupid', 'ridiculous', 'terrible', 'worst', 'awful', 'toxic', 'betrayed'], weight: 0.6 },
+    { words: ['unfair', 'stupid', 'ridiculous', 'terrible', 'worst', 'awful', 'toxic', 'betrayed', 'scolded', 'criticized', 'mocked', 'ridiculed', 'dismissed'], weight: 0.6 },
   ],
   fear: [
     { words: ['afraid', 'scared', 'terrified', 'frightened', 'panic', 'horror', 'dread', 'phobia', 'nightmare', 'alarmed', 'petrified', 'trembling', 'shaking', 'haunted', 'threatened', 'uneasy', 'shook', 'shocking'], weight: 1.0 },
@@ -170,6 +170,25 @@ export function analyzeEmotion(text: string): EmotionResult {
   const scores: Record<EmotionType, number> = {
     happy: 0, sad: 0, angry: 0, fear: 0, surprise: 0, love: 0, anxious: 0,
   };
+
+  // Emoji/symbol detection
+  const emojiMap: { emoji: string; emotion: EmotionType; boost: number }[] = [
+    { emoji: '💔', emotion: 'sad', boost: 2 },
+    { emoji: '😢', emotion: 'sad', boost: 1.5 },
+    { emoji: '😭', emotion: 'sad', boost: 2 },
+    { emoji: '💀', emotion: 'sad', boost: 1 },
+    { emoji: '😡', emotion: 'angry', boost: 2 },
+    { emoji: '🤬', emotion: 'angry', boost: 2 },
+    { emoji: '😨', emotion: 'fear', boost: 2 },
+    { emoji: '😰', emotion: 'anxious', boost: 2 },
+    { emoji: '❤️', emotion: 'love', boost: 2 },
+    { emoji: '😊', emotion: 'happy', boost: 1.5 },
+  ];
+  for (const { emoji, emotion, boost } of emojiMap) {
+    if (text.includes(emoji)) {
+      scores[emotion] += boost;
+    }
+  }
   const matchedKeywords: Record<EmotionType, string[]> = {
     happy: [], sad: [], angry: [], fear: [], surprise: [], love: [], anxious: [],
   };
