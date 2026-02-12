@@ -33,7 +33,7 @@ const KEYWORD_MAP: Record<EmotionType, { words: string[]; weight: number }[]> = 
     { words: ['good', 'nice', 'well', 'fine', 'okay', 'better', 'awesome', 'cool', 'sweet', 'yay'], weight: 0.6 },
   ],
   sad: [
-    { words: ['sad', 'depressed', 'unhappy', 'miserable', 'heartbroken', 'devastated', 'grief', 'mourning', 'loss', 'cry', 'crying', 'tears', 'lonely', 'alone', 'empty', 'hopeless', 'despair', 'sorrow', 'melancholy', 'gloomy', 'down', 'blue', 'broken', 'hurt', 'pain', 'suffering', 'tired', 'exhausted', 'drained', 'numb', 'difficult', 'accident', 'shook', 'wrong', 'recover', 'worse', 'bad day', 'tough', 'hard day', 'rough', 'terrible day', 'awful day', 'struggling', 'blood', 'scolded', 'unappreciated', 'ignored', 'rejected', 'criticized', 'unloved', 'unseen', 'unheard', 'worthless', 'invisible', 'forgotten'], weight: 1.0 },
+    { words: ['sad', 'depressed', 'unhappy', 'miserable', 'heartbroken', 'devastated', 'grief', 'mourning', 'loss', 'cry', 'crying', 'tears', 'lonely', 'alone', 'empty', 'hopeless', 'despair', 'sorrow', 'melancholy', 'gloomy', 'down', 'blue', 'broken', 'hurt', 'pain', 'suffering', 'tired', 'exhausted', 'drained', 'numb', 'difficult', 'accident', 'shook', 'wrong', 'recover', 'worse', 'bad day', 'tough', 'hard day', 'rough', 'terrible day', 'awful day', 'struggling', 'blood', 'scolded', 'unappreciated', 'ignored', 'rejected', 'criticized', 'unloved', 'unseen', 'unheard', 'worthless', 'invisible', 'forgotten', 'die', 'dying', 'dead', 'death', 'disturbed', 'distressed', 'tormented', 'agony', 'anguish'], weight: 1.0 },
     { words: ['miss', 'missing', 'wish', 'regret', 'sorry', 'disappointed', 'unfortunate', 'heavy', 'wasn\'t a good day', 'not a good day', 'hope tomorrow', 'rest and recover', 'no one cares', "doesn't matter", 'not enough', 'never enough', 'taken for granted', 'wasted effort'], weight: 0.6 },
   ],
   angry: [
@@ -209,6 +209,12 @@ export function analyzeEmotion(text: string): EmotionResult {
     }
   }
 
+  // Safety check — if crisis language detected, bias toward sad
+  const safety = detectSafety(text);
+  if (safety.alert) {
+    scores.sad += 3;
+  }
+
   // Default to happy (calm/content) if no strong signals
   const totalScore = Object.values(scores).reduce((a, b) => a + b, 0);
   if (totalScore < 1) {
@@ -255,8 +261,7 @@ export function analyzeEmotion(text: string): EmotionResult {
   const shuffled = [...allSuggestions].sort(() => Math.random() - 0.5);
   const suggestions = shuffled.slice(0, 3);
 
-  // Safety
-  const safety = detectSafety(text);
+  // Safety already computed above
 
   // Mental health classification
   const mentalHealthStatus = classifyMentalHealth(text);
