@@ -147,7 +147,7 @@ export function classifyMentalHealth(text: string): MentalHealthResult {
 
 // Mapping from dataset status to app emotion types
 export const STATUS_TO_EMOTION: Record<MentalHealthStatus, string> = {
-  Normal: 'neutral',
+  Normal: 'happy',
   Depression: 'sad',
   Suicidal: 'sad',
   Anxiety: 'anxious',
