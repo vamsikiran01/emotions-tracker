@@ -22,20 +22,19 @@ const Index = () => {
 
   const isValidEntry = (input: string): boolean => {
     const trimmed = input.trim();
+    if (trimmed.length === 0) return false;
     const words = trimmed.split(/\s+/).filter(Boolean);
-    if (words.length < 3) return false;
-    if (trimmed.length < 15) return false;
 
     const isMeaningfulWord = (word: string): boolean => {
-      if (word.length < 2) return false;
-      if (/\d/.test(word)) return false;
-      if (!/[aeiou]/i.test(word)) return false;
-      if (/[^aeiou\s]{4,}/i.test(word)) return false;
+      const clean = word.replace(/[^a-zA-Z]/g, '');
+      if (clean.length === 0) return false;
+      if (!/[aeiou]/i.test(clean)) return false;
+      if (/[^aeiou]{5,}/i.test(clean)) return false;
       return true;
     };
 
     const meaningfulWords = words.filter(isMeaningfulWord);
-    return meaningfulWords.length >= words.length * 0.6;
+    return meaningfulWords.length >= Math.max(1, words.length * 0.5);
   };
 
   const handleAnalyze = async () => {
