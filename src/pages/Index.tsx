@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sparkles, Loader2, PenLine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { analyzeEmotionWithAI, AFFIRMATIONS } from '@/lib/emotionEngine';
 import { saveEntry, JournalEntry } from '@/lib/storage';
-import { useMemo } from 'react';
+import { toast } from '@/hooks/use-toast';
 
 const Index = () => {
   const [text, setText] = useState('');
@@ -20,8 +20,25 @@ const Index = () => {
   const affirmation = useMemo(() =>
     AFFIRMATIONS[Math.floor(Math.random() * AFFIRMATIONS.length)], []);
 
+  const isValidEntry = (input: string): boolean => {
+    const trimmed = input.trim();
+    const words = trimmed.split(/\s+/).filter(Boolean);
+    if (words.length < 3) return false;
+    // Check if mostly gibberish (e.g. "asdf jkl qwer")
+    const meaningfulWords = words.filter(w => w.length > 1 && /[aeiou]/i.test(w));
+    return meaningfulWords.length >= words.length * 0.4;
+  };
+
   const handleAnalyze = async () => {
     if (!text.trim()) return;
+    if (!isValidEntry(text)) {
+      toast({
+        title: "Invalid entry",
+        description: "Please enter a valid journal entry with meaningful text.",
+        variant: "destructive",
+      });
+      return;
+    }
     setAnalyzing(true);
     try {
       const result = await analyzeEmotionWithAI(text);
