@@ -4,7 +4,8 @@ import { Sparkles, Loader2, PenLine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
-import { analyzeEmotionWithAI, AFFIRMATIONS } from '@/lib/emotionEngine';
+import { analyzeEmotionWithAI, AFFIRMATIONS, EMOTION_WORDS_SET, EMOTION_META } from '@/lib/emotionEngine';
+import type { EmotionType, EmotionResult } from '@/lib/emotionEngine';
 import { saveEntry, JournalEntry } from '@/lib/storage';
 import { toast } from '@/hooks/use-toast';
 import { isEnglishWord } from '@/lib/englishWords';
@@ -41,7 +42,34 @@ const Index = () => {
     }
     setAnalyzing(true);
     try {
-      const result = await analyzeEmotionWithAI(text);
+      const words = text.trim().split(/\s+/).filter(Boolean);
+      let result: EmotionResult;
+
+      // Single word: check if it's an emotion word → analyze, otherwise → neutral
+      if (words.length === 1) {
+        const word = words[0].toLowerCase().replace(/[^a-z]/g, '');
+        if (EMOTION_WORDS_SET.has(word)) {
+          result = await analyzeEmotionWithAI(text);
+        } else {
+          // Return neutral for non-emotional single words
+          result = {
+            primaryEmotion: 'neutral' as EmotionType,
+            confidence: 80,
+            sentiment: 'Neutral',
+            keywords: [],
+            intensity: 'Low',
+            insight: "You shared a simple thought. Not every moment carries a strong emotion — and that's perfectly fine. 😊",
+            suggestions: [
+              "📝 Try writing a bit more about how your day is going",
+              "🚶 Take a moment to check in with yourself — how are you really feeling?",
+              "☕ Enjoy this calm moment and let your thoughts flow freely",
+            ],
+            safetyAlert: false,
+          };
+        }
+      } else {
+        result = await analyzeEmotionWithAI(text);
+      }
       const entry: JournalEntry = {
         id: crypto.randomUUID(),
         date: new Date().toISOString(),

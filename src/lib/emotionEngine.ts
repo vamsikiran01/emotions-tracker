@@ -1,4 +1,4 @@
-export type EmotionType = 'happy' | 'sad' | 'angry' | 'fear' | 'surprise' | 'love' | 'anxious';
+export type EmotionType = 'happy' | 'sad' | 'angry' | 'fear' | 'surprise' | 'love' | 'anxious' | 'neutral';
 export type SentimentType = 'Positive' | 'Negative' | 'Neutral' | 'Mixed';
 export type IntensityLevel = 'Low' | 'Medium' | 'High';
 
@@ -26,6 +26,7 @@ export const EMOTION_META: Record<EmotionType, { emoji: string; color: string; l
   surprise: { emoji: '😲', color: 'var(--emotion-surprise)', label: 'Surprise' },
   love: { emoji: '❤️', color: 'var(--emotion-love)', label: 'Love' },
   anxious: { emoji: '😰', color: 'var(--emotion-anxious)', label: 'Anxious' },
+  neutral: { emoji: '😐', color: 'var(--emotion-neutral)', label: 'Neutral' },
 };
 
 const KEYWORD_MAP: Record<EmotionType, { words: string[]; weight: number }[]> = {
@@ -57,7 +58,15 @@ const KEYWORD_MAP: Record<EmotionType, { words: string[]; weight: number }[]> = 
     { words: ['anxious', 'anxiety', 'worried', 'nervous', 'stress', 'stressed', 'tense', 'restless', 'uneasy', 'overwhelmed', 'overthinking', 'racing thoughts', 'cant sleep', 'insomnia', 'pressure', 'burden', 'suffocating', 'panic attack', 'chest tight', 'breathing', 'replaying'], weight: 1.0 },
     { words: ['what if', 'concern', 'doubt', 'uncertain', 'deadline', 'too much', 'cant handle', 'struggling', 'keep replaying'], weight: 0.6 },
   ],
+  neutral: [],
 };
+
+// Flat set of all emotion-related words for quick lookup
+export const EMOTION_WORDS_SET: Set<string> = new Set(
+  (Object.entries(KEYWORD_MAP) as [EmotionType, { words: string[]; weight: number }[]][])
+    .filter(([key]) => key !== 'neutral')
+    .flatMap(([, groups]) => groups.flatMap(g => g.words.filter(w => !w.includes(' '))))
+);
 
 const SAFETY_KEYWORDS = [
   'suicide', 'suicidal', 'kill myself', 'end my life', 'want to die', 'dont want to live',
@@ -101,6 +110,11 @@ const INSIGHTS: Record<EmotionType, string[]> = {
     "Your entry reveals significant worry and mental tension. The anxious thoughts you're experiencing can feel overwhelming, but they are manageable.",
     "There's a restless energy in your words that suggests your mind is racing. Anxiety often amplifies our concerns beyond their actual scope.",
     "Your writing reflects a state of heightened worry. Remember that anxiety, while uncomfortable, is your mind trying to protect you.",
+  ],
+  neutral: [
+    "Your entry seems calm and grounded. Sometimes just checking in with yourself is enough.",
+    "There's a steady, balanced tone in what you've shared. Not every moment needs to be intense — this is okay.",
+    "Your words reflect a neutral state of mind. This can be a good foundation for reflection and self-awareness.",
   ],
 };
 
@@ -147,6 +161,12 @@ const SUGGESTIONS: Record<EmotionType, string[]> = {
     "🧊 Try the ice cube technique: hold an ice cube to engage your senses and ground yourself",
     "🚫 Limit news and social media for the rest of today — give your mind a break",
   ],
+  neutral: [
+    "📝 Take a moment to reflect — write down one thing you're grateful for today",
+    "🚶 Go for a short walk and observe what's around you with fresh eyes",
+    "☕ Enjoy a quiet moment with your favorite drink — just be present",
+    "🎵 Put on some music you enjoy and let yourself relax",
+  ],
 };
 
 function tokenize(text: string): string[] {
@@ -169,7 +189,7 @@ export function analyzeEmotion(text: string): EmotionResult {
   const tokens = tokenize(text);
   const lower = text.toLowerCase();
   const scores: Record<EmotionType, number> = {
-    happy: 0, sad: 0, angry: 0, fear: 0, surprise: 0, love: 0, anxious: 0,
+    happy: 0, sad: 0, angry: 0, fear: 0, surprise: 0, love: 0, anxious: 0, neutral: 0,
   };
 
   // Emoji/symbol detection
@@ -191,7 +211,7 @@ export function analyzeEmotion(text: string): EmotionResult {
     }
   }
   const matchedKeywords: Record<EmotionType, string[]> = {
-    happy: [], sad: [], angry: [], fear: [], surprise: [], love: [], anxious: [],
+    happy: [], sad: [], angry: [], fear: [], surprise: [], love: [], anxious: [], neutral: [],
   };
 
   for (const [emotion, groups] of Object.entries(KEYWORD_MAP) as [EmotionType, typeof KEYWORD_MAP[EmotionType]][]) {
@@ -216,10 +236,10 @@ export function analyzeEmotion(text: string): EmotionResult {
     scores.sad += 3;
   }
 
-  // Default to happy (calm/content) if no strong signals
+  // Default to neutral if no strong signals
   const totalScore = Object.values(scores).reduce((a, b) => a + b, 0);
   if (totalScore < 1) {
-    scores.happy += 2;
+    scores.neutral += 2;
   }
 
   // Find primary emotion
@@ -290,7 +310,7 @@ export async function analyzeEmotionWithAI(text: string): Promise<EmotionResult>
     if (error) throw error;
     if (!data || !data.primaryEmotion) throw new Error('Invalid AI response');
 
-    const validEmotions: EmotionType[] = ['happy', 'sad', 'angry', 'fear', 'surprise', 'love', 'anxious'];
+    const validEmotions: EmotionType[] = ['happy', 'sad', 'angry', 'fear', 'surprise', 'love', 'anxious', 'neutral'];
     if (!validEmotions.includes(data.primaryEmotion)) throw new Error('Invalid emotion type');
 
     return {

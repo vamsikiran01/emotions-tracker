@@ -96,7 +96,7 @@ export function getEmotionDistribution(entries: JournalEntry[]): { emotion: stri
   const colorMap: Record<string, string> = {
     happy: 'hsl(45, 90%, 55%)', sad: 'hsl(220, 60%, 55%)', angry: 'hsl(0, 75%, 55%)',
     fear: 'hsl(280, 50%, 50%)', surprise: 'hsl(35, 90%, 55%)', love: 'hsl(340, 75%, 60%)',
-    anxious: 'hsl(25, 70%, 55%)',
+    anxious: 'hsl(25, 70%, 55%)', neutral: 'hsl(220, 15%, 55%)',
   };
   return Object.entries(counts).map(([emotion, count]) => ({
     emotion: emotion.charAt(0).toUpperCase() + emotion.slice(1),
