@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { analyzeEmotionWithAI, AFFIRMATIONS } from '@/lib/emotionEngine';
 import { saveEntry, JournalEntry } from '@/lib/storage';
 import { toast } from '@/hooks/use-toast';
+import { isEnglishWord } from '@/lib/englishWords';
 
 const Index = () => {
   const [text, setText] = useState('');
@@ -24,17 +25,8 @@ const Index = () => {
     const trimmed = input.trim();
     if (trimmed.length === 0) return false;
     const words = trimmed.split(/\s+/).filter(Boolean);
-
-    const isMeaningfulWord = (word: string): boolean => {
-      const clean = word.replace(/[^a-zA-Z]/g, '');
-      if (clean.length === 0) return false;
-      if (!/[aeiou]/i.test(clean)) return false;
-      if (/[^aeiou]{5,}/i.test(clean)) return false;
-      return true;
-    };
-
-    const meaningfulWords = words.filter(isMeaningfulWord);
-    return meaningfulWords.length >= Math.max(1, words.length * 0.5);
+    const englishWords = words.filter(isEnglishWord);
+    return englishWords.length >= Math.max(1, Math.ceil(words.length * 0.5));
   };
 
   const handleAnalyze = async () => {
