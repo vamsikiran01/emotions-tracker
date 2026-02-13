@@ -1,43 +1,57 @@
 
 
-# Plan: Rename "Sentira" to "Emo Track" and Update Logo
+# Fix Input Validation and Update PWA Icon
 
-## What Changes
-1. Replace the name "Sentira" with "Emo Track" everywhere it appears
-2. Replace the `BookHeart` (love/heart icon) with a sentiment-analysis-related icon like `BrainCircuit` from Lucide (a brain with circuit lines -- represents AI-powered emotion analysis)
+## Issue 1: Meaningless Text Passes Validation
 
-## Files to Update
+The current validation only checks if words contain vowels, which lets gibberish like "Jao w8w nhb wh aia" through because words like "Jao" and "aia" technically contain vowels.
 
-### 1. `src/components/Header.tsx`
-- Change `BookHeart` import to `BrainCircuit`
-- Replace icon usage
-- Change text from "Sentira" to "Emo Track"
+### Improved Validation Strategy
 
-### 2. `src/pages/Login.tsx`
-- Change `BookHeart` import to `BrainCircuit`
-- Replace icon usage
-- Change text from "Sentira" to "Emo Track"
-- Update subtitle text
+Update `isValidEntry` in `src/pages/Index.tsx` with stricter checks:
 
-### 3. `index.html`
-- Update all `<title>`, `<meta>` tags from "Sentira" to "Emo Track"
+- **Minimum word length**: Require at least 3 words (keep existing)
+- **Minimum entry length**: Require at least 15 characters total
+- **Vowel-consonant pattern check**: Real words typically have a mix of vowels and consonants in natural patterns. Reject words that are just random characters
+- **Dictionary-like heuristic**: Check that words follow common English letter patterns (no excessive consecutive consonants like "nhb", "w8w")
+- **Reject words with numbers mixed in** (like "w8w")
+- **Require a higher threshold**: At least 60% of words must pass the meaningful check
+- **Average word length check**: Reject entries where average word length is suspiciously short (under 2 chars)
 
-### 4. `vite.config.ts`
-- Update PWA manifest name and short_name to "Emo Track"
+```typescript
+const isValidEntry = (input: string): boolean => {
+  const trimmed = input.trim();
+  const words = trimmed.split(/\s+/).filter(Boolean);
+  if (words.length < 3) return false;
+  if (trimmed.length < 15) return false;
 
-### 5. `src/pages/Install.tsx`
-- Replace all "Sentira" text with "Emo Track"
+  const isMeaningfulWord = (word: string): boolean => {
+    if (word.length < 2) return false;
+    // Reject words with numbers
+    if (/\d/.test(word)) return false;
+    // Must contain at least one vowel
+    if (!/[aeiou]/i.test(word)) return false;
+    // Reject excessive consecutive consonants (3+)
+    if (/[^aeiou\s]{4,}/i.test(word)) return false;
+    return true;
+  };
 
-### 6. `supabase/functions/analyze-emotion/index.ts`
-- Update app name reference in the system prompt
+  const meaningfulWords = words.filter(isMeaningfulWord);
+  return meaningfulWords.length >= words.length * 0.6;
+};
+```
 
-### 7. `supabase/functions/send-login-alert/index.ts`
-- Update email sender name and content
+## Issue 2: PWA Home Screen Icon
 
-### 8. `supabase/functions/send-notifications/index.ts`
-- Update email sender name and content
+Generate a new `public/icon-192x192.png` with:
 
-## Technical Details
+- A brain icon with heartbeat/pulse lines running through the middle
+- Light blue / sky blue background
+- No text -- just the icon
+- Clean, modern, minimalist design
 
-The `BrainCircuit` icon from Lucide represents AI/neural analysis, which fits perfectly for a sentiment analysis app. No new dependencies needed -- it's already available in the installed `lucide-react` package.
+### Technical Steps
+
+1. **Edit** `src/pages/Index.tsx` -- update the `isValidEntry` function with stricter validation
+2. **Generate** a new `public/icon-192x192.png` -- brain with pulse lines on sky blue background, no text
 
