@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { BookHeart, Loader2 } from 'lucide-react';
+import { BrainCircuit, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
@@ -40,14 +40,14 @@ const Login = () => {
       <Card className="w-full max-w-sm shadow-xl border-border/50">
         <CardContent className="p-8 text-center space-y-6">
           <div className="flex flex-col items-center gap-3">
-            <BookHeart className="h-12 w-12 text-primary" />
+            <BrainCircuit className="h-12 w-12 text-primary" />
             <h1
               className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent"
               style={{ fontFamily: "'Quicksand', sans-serif" }}
             >
-              Sentira
+              Emo Track
             </h1>
-            <p className="text-sm text-muted-foreground">Your emotional wellness journal</p>
+            <p className="text-sm text-muted-foreground">Your AI-powered sentiment analysis journal</p>
           </div>
 
           <Button

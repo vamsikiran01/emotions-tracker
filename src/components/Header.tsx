@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Moon, Sun, BookHeart, Menu, X } from 'lucide-react';
+import { Moon, Sun, BrainCircuit, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { NavLink } from 'react-router-dom';
 import { useTheme } from '@/hooks/useTheme';
@@ -22,10 +22,10 @@ const Header = () => {
     <header className="sticky top-0 z-50 backdrop-blur-md bg-background/80 border-b border-border/50">
       <div className="container mx-auto flex items-center justify-between h-14 md:h-16 px-4">
         <NavLink to="/" className="flex items-center gap-2 group" onClick={() => setOpen(false)}>
-          <BookHeart className="h-6 w-6 md:h-7 md:w-7 text-primary transition-transform group-hover:scale-110" />
+          <BrainCircuit className="h-6 w-6 md:h-7 md:w-7 text-primary transition-transform group-hover:scale-110" />
           <span className="text-lg md:text-xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent"
                 style={{ fontFamily: "'Quicksand', sans-serif" }}>
-            Sentira
+            Emo Track
           </span>
         </NavLink>
 

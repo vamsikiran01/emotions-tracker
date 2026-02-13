@@ -4,7 +4,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SYSTEM_PROMPT = `You are an expert emotion analysis AI for a mental health journaling app called Sentira. Analyze the user's journal entry and return a JSON response.
+const SYSTEM_PROMPT = `You are an expert emotion analysis AI for a mental health journaling app called Emo Track. Analyze the user's journal entry and return a JSON response.
 
 You MUST call the "analyze_emotion" function with your analysis. Do NOT return plain text.
 
