@@ -9,7 +9,7 @@ const SYSTEM_PROMPT = `You are an expert emotion analysis AI for a mental health
 You MUST call the "analyze_emotion" function with your analysis. Do NOT return plain text.
 
 Rules:
-- primaryEmotion: exactly one of: happy, sad, angry, fear, surprise, love, anxious
+- primaryEmotion: exactly one of: happy, sad, angry, fear, surprise, love, anxious, neutral
 - confidence: integer 55-98 representing how confident you are
 - sentiment: exactly one of: Positive, Negative, Neutral, Mixed
 - intensity: exactly one of: Low, Medium, High
@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
               parameters: {
                 type: "object",
                 properties: {
-                  primaryEmotion: { type: "string", enum: ["happy", "sad", "angry", "fear", "surprise", "love", "anxious"] },
+                  primaryEmotion: { type: "string", enum: ["happy", "sad", "angry", "fear", "surprise", "love", "anxious", "neutral"] },
                   confidence: { type: "integer", minimum: 55, maximum: 98 },
                   sentiment: { type: "string", enum: ["Positive", "Negative", "Neutral", "Mixed"] },
                   intensity: { type: "string", enum: ["Low", "Medium", "High"] },
