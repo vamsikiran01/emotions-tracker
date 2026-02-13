@@ -24,9 +24,18 @@ const Index = () => {
     const trimmed = input.trim();
     const words = trimmed.split(/\s+/).filter(Boolean);
     if (words.length < 3) return false;
-    // Check if mostly gibberish (e.g. "asdf jkl qwer")
-    const meaningfulWords = words.filter(w => w.length > 1 && /[aeiou]/i.test(w));
-    return meaningfulWords.length >= words.length * 0.4;
+    if (trimmed.length < 15) return false;
+
+    const isMeaningfulWord = (word: string): boolean => {
+      if (word.length < 2) return false;
+      if (/\d/.test(word)) return false;
+      if (!/[aeiou]/i.test(word)) return false;
+      if (/[^aeiou\s]{4,}/i.test(word)) return false;
+      return true;
+    };
+
+    const meaningfulWords = words.filter(isMeaningfulWord);
+    return meaningfulWords.length >= words.length * 0.6;
   };
 
   const handleAnalyze = async () => {
