@@ -60,12 +60,12 @@ Deno.serve(async (req) => {
         Authorization: `Bearer ${resendKey}`,
       },
       body: JSON.stringify({
-        from: "Sentira <onboarding@resend.dev>",
+        from: "Emo Track <onboarding@resend.dev>",
         to: [email],
-        subject: "New Login to Sentira",
+        subject: "New Login to Emo Track",
         html: `
           <h2>Login Alert 🔔</h2>
-          <p>You just logged in to <strong>Sentira</strong>.</p>
+          <p>You just logged in to <strong>Emo Track</strong>.</p>
           <ul>
             <li><strong>Time:</strong> ${now} UTC</li>
             <li><strong>Device:</strong> ${userAgent}</li>

@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
         });
         const uniqueEmotions = [...new Set(emotions)];
 
-        subject = "Your Daily Sentira Journal Summary 📊";
+        subject = "Your Daily Emo Track Journal Summary 📊";
         html = `
           <h2>Daily Journal Summary</h2>
           <p>Great job journaling today! You made <strong>${entries.length}</strong> ${entries.length === 1 ? "entry" : "entries"}.</p>
@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
           <h2>Streak Reminder</h2>
           <p>Hey there! We noticed you haven't journaled today.</p>
           <p>Taking a few minutes to reflect on your emotions can make a big difference in your well-being.</p>
-          <p><a href="https://feel-guide-ai.lovable.app">Open Sentira now</a> and keep your streak alive! 🚀</p>
+          <p><a href="https://feel-guide-ai.lovable.app">Open Emo Track now</a> and keep your streak alive! 🚀</p>
         `;
       }
 
@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
           Authorization: `Bearer ${resendKey}`,
         },
         body: JSON.stringify({
-          from: "Sentira <onboarding@resend.dev>",
+          from: "Emo Track <onboarding@resend.dev>",
           to: [user.email],
           subject,
           html,

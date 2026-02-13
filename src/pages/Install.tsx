@@ -39,7 +39,7 @@ const Install = () => {
           <CardContent className="py-12">
             <CheckCircle2 className="h-16 w-16 mx-auto text-primary mb-4" />
             <h1 className="text-2xl font-bold text-foreground mb-2">Already Installed!</h1>
-            <p className="text-sm text-muted-foreground">Sentira is running as an app on your device.</p>
+            <p className="text-sm text-muted-foreground">Emo Track is running as an app on your device.</p>
           </CardContent>
         </Card>
       </div>
@@ -51,8 +51,8 @@ const Install = () => {
       <div className="container mx-auto px-4 py-8 max-w-lg">
         <div className="text-center mb-8">
           <Smartphone className="h-12 w-12 mx-auto text-primary mb-3" />
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">Install Sentira</h1>
-          <p className="text-sm text-muted-foreground">Add Sentira to your home screen for a native app experience — no app store needed.</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">Install Emo Track</h1>
+          <p className="text-sm text-muted-foreground">Add Emo Track to your home screen for a native app experience — no app store needed.</p>
         </div>
 
         {/* Android / Desktop install */}
@@ -60,7 +60,8 @@ const Install = () => {
           <Card className="mb-6 shadow-lg border-primary/20">
             <CardContent className="p-6 text-center">
               <Button onClick={handleInstall} size="lg" className="gap-2 rounded-full px-8 w-full sm:w-auto">
-                <Download className="h-5 w-5" /> Install Sentira
+
+                <Download className="h-5 w-5" /> Install Emo Track
               </Button>
             </CardContent>
           </Card>

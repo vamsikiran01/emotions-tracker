@@ -20,9 +20,9 @@ export default defineConfig(({ mode }) => ({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "icon-192x192.png"],
       manifest: {
-        name: "Sentira – Emotion Journal",
-        short_name: "Sentira",
-        description: "Your personal emotion journal and mood tracker",
+        name: "Emo Track – Sentiment Analysis Journal",
+        short_name: "Emo Track",
+        description: "Your AI-powered sentiment analysis journal and mood tracker",
         theme_color: "#7c3aed",
         background_color: "#f5f3ff",
         display: "standalone",
