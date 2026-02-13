@@ -4,9 +4,12 @@ import { ArrowLeft, AlertTriangle, Lightbulb, Brain, Share2, Pencil, Trash2, Sav
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { EMOTION_META, analyzeEmotionWithAI } from '@/lib/emotionEngine';
+import { EMOTION_META, analyzeEmotionWithAI, EMOTION_WORDS_SET } from '@/lib/emotionEngine';
+import type { EmotionType, EmotionResult } from '@/lib/emotionEngine';
 import { updateEntry, deleteEntry } from '@/lib/storage';
 import type { JournalEntry } from '@/lib/storage';
+import { isEnglishWord } from '@/lib/englishWords';
+import { toast } from '@/hooks/use-toast';
 
 const intensityColor: Record<string, string> = {
   Low: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 shadow-sm',
@@ -58,10 +61,53 @@ const Results = () => {
     setEditing(true);
   };
 
+  const isValidEntry = (input: string): boolean => {
+    const trimmed = input.trim();
+    if (trimmed.length === 0) return false;
+    const words = trimmed.split(/\s+/).filter(Boolean);
+    const englishWords = words.filter(isEnglishWord);
+    return englishWords.length >= Math.max(1, Math.ceil(words.length * 0.5));
+  };
+
   const handleSaveEdit = async () => {
     const trimmed = editText.trim();
     if (!trimmed) return;
-    const newResult = await analyzeEmotionWithAI(trimmed);
+    if (!isValidEntry(trimmed)) {
+      toast({
+        title: "Invalid entry",
+        description: "Please enter a valid journal entry with meaningful text.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const words = trimmed.split(/\s+/).filter(Boolean);
+    let newResult: EmotionResult;
+
+    if (words.length === 1) {
+      const word = words[0].toLowerCase().replace(/[^a-z]/g, '');
+      if (EMOTION_WORDS_SET.has(word)) {
+        newResult = await analyzeEmotionWithAI(trimmed);
+      } else {
+        newResult = {
+          primaryEmotion: 'neutral' as EmotionType,
+          confidence: 80,
+          sentiment: 'Neutral',
+          keywords: [],
+          intensity: 'Low',
+          insight: "You shared a simple thought. Not every moment carries a strong emotion — and that's perfectly fine. 😊",
+          suggestions: [
+            "📝 Try writing a bit more about how your day is going",
+            "🚶 Take a moment to check in with yourself — how are you really feeling?",
+            "☕ Enjoy this calm moment and let your thoughts flow freely",
+          ],
+          safetyAlert: false,
+        };
+      }
+    } else {
+      newResult = await analyzeEmotionWithAI(trimmed);
+    }
+
     const updated: JournalEntry = { ...entry, text: trimmed, result: newResult };
     await updateEntry(updated);
     setEntry(updated);
