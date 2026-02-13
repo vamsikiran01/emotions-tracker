@@ -1,25 +1,43 @@
 
 
-# Plan: Simplify AI Language to Everyday Words
+# Plan: Rename "Sentira" to "Emo Track" and Update Logo
 
 ## What Changes
-Update the AI system prompt in the backend function to generate results using simple, daily-life language instead of complex or clinical wording.
+1. Replace the name "Sentira" with "Emo Track" everywhere it appears
+2. Replace the `BookHeart` (love/heart icon) with a sentiment-analysis-related icon like `BrainCircuit` from Lucide (a brain with circuit lines -- represents AI-powered emotion analysis)
 
-## Changes
+## Files to Update
 
-### Update `supabase/functions/analyze-emotion/index.ts`
-Modify the `SYSTEM_PROMPT` to add clear language guidelines:
+### 1. `src/components/Header.tsx`
+- Change `BookHeart` import to `BrainCircuit`
+- Replace icon usage
+- Change text from "Sentira" to "Emo Track"
 
-**Current prompt says:**
-> "insight: A warm, empathetic 1-2 sentence insight about their emotional state. Be specific to what they wrote."
-> "suggestions: exactly 3 actionable, personalized suggestions with emoji prefixes"
+### 2. `src/pages/Login.tsx`
+- Change `BookHeart` import to `BrainCircuit`
+- Replace icon usage
+- Change text from "Sentira" to "Emo Track"
+- Update subtitle text
 
-**Updated prompt will say:**
-- Write insights like you're talking to a close friend -- use simple, everyday words anyone would understand
-- Avoid formal, clinical, or complex vocabulary (e.g., say "out of the blue" not "unanticipated", say "feeling low" not "emotional exhaustion", say "tough day" not "adversity")
-- Use relatable, real-life phrases like: "suddenly", "unexpectedly", "out of nowhere" for surprise; "scared", "freaked out", "shook" for fear; "feeling down", "rough day", "heavy heart" for sadness
-- Suggestions should sound like friendly advice, not therapy instructions (e.g., "Take a walk and clear your head" not "Engage in ambulatory mindfulness practice")
-- Keep everything conversational and warm -- like a caring friend, not a textbook
+### 3. `index.html`
+- Update all `<title>`, `<meta>` tags from "Sentira" to "Emo Track"
 
-No UI or other file changes needed -- this is purely a prompt tweak in the backend function.
+### 4. `vite.config.ts`
+- Update PWA manifest name and short_name to "Emo Track"
+
+### 5. `src/pages/Install.tsx`
+- Replace all "Sentira" text with "Emo Track"
+
+### 6. `supabase/functions/analyze-emotion/index.ts`
+- Update app name reference in the system prompt
+
+### 7. `supabase/functions/send-login-alert/index.ts`
+- Update email sender name and content
+
+### 8. `supabase/functions/send-notifications/index.ts`
+- Update email sender name and content
+
+## Technical Details
+
+The `BrainCircuit` icon from Lucide represents AI/neural analysis, which fits perfectly for a sentiment analysis app. No new dependencies needed -- it's already available in the installed `lucide-react` package.
 
