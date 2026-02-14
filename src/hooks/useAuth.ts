@@ -14,17 +14,23 @@ export function useAuth() {
         setUser(session?.user ?? null);
         setLoading(false);
 
-        // Send login alert on sign-in
+        // Send login alert on sign-in (non-blocking, fully silent)
         if (event === 'SIGNED_IN' && session) {
-          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-          fetch(`${supabaseUrl}/functions/v1/send-login-alert`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${session.access_token}`,
-            },
-            body: JSON.stringify({ userAgent: navigator.userAgent }),
-          }).catch(console.error);
+          try {
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+            const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+            fetch(`${supabaseUrl}/functions/v1/send-login-alert`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.access_token}`,
+                'apikey': anonKey,
+              },
+              body: JSON.stringify({ userAgent: navigator.userAgent }),
+            }).catch(() => {});
+          } catch {
+            // silently ignore
+          }
         }
       }
     );
