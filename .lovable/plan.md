@@ -1,62 +1,76 @@
 
 
-# Voice Input Feature for Emo Track
+# Privacy and Unlimited Storage for Emo Track
 
-## Overview
-Add a microphone button to the journal page that lets you speak your journal entry. Your voice will be converted to text in real-time and displayed in the journal text area. The audio recording will also be saved and viewable in the dashboard.
+## The Problems
+1. **No privacy**: All users see everyone's journal entries because the database policies allow public access and entries use a shared dummy user ID.
+2. **Entry limit**: The database query has a default 1,000-row cap, and there's no pagination for large datasets.
 
-**Important note:** Python cannot be used in this project -- the platform only supports TypeScript/JavaScript. However, we achieve everything using:
-- **Web Speech API** (built into the browser, free, no API key) for real-time speech-to-text
-- **MediaRecorder API** (built into the browser) to record the audio
-- **Lovable Cloud Storage** to save audio files
-- **TypeScript** for all code
+## What Will Change
+
+### 1. Require Login on All Pages
+- Wrap the journal page (`/`), results page (`/results`), and dashboard (`/dashboard`) with the existing `ProtectedRoute` component in `App.tsx`
+- Users who aren't signed in will be redirected to the `/login` page (Google sign-in already works)
+
+### 2. Lock Down the Database (RLS Policies)
+- **Remove** all 4 existing public RLS policies (SELECT, INSERT, UPDATE, DELETE with `true`)
+- **Create** new policies that restrict every operation to only the authenticated user's own rows:
+  - SELECT: `auth.uid() = user_id`
+  - INSERT: `auth.uid() = user_id`
+  - UPDATE: `auth.uid() = user_id`
+  - DELETE: `auth.uid() = user_id`
+- Also make the `user_id` column default to `auth.uid()` instead of the dummy UUID, so it's automatically set on insert
+
+### 3. Save Entries with the Real User ID
+- Update `saveEntry` in `src/lib/storage.ts` to include `user_id` from the current session (`supabase.auth.getUser()`)
+- No need to filter by `user_id` in queries -- RLS handles it automatically
+
+### 4. Fetch All Entries (No Limit)
+- Update `getEntries` to use paginated fetching: loop with `.range(offset, offset + 999)` until all rows are retrieved
+- This removes the 1,000-row default cap and supports unlimited entries
+
+### 5. Update "Clear All" Logic
+- The current `clearEntries` uses `.neq('id', '00000000-...')` which is a workaround. With RLS in place, a simple `.neq('id', '')` or `.gte('created_at', '1970-01-01')` will delete only the current user's rows automatically
 
 ---
 
-## What You'll Get
+## Technical Details
 
-1. **Mic button** on the journal page (bottom-right of the text area) -- tap to start/stop recording
-2. **Live transcription** -- your speech appears as text in the journal box in real-time
-3. **Audio saved** -- the recorded audio file is uploaded to cloud storage and linked to the journal entry
-4. **Audio playback in Dashboard** -- each past entry that has a voice recording shows a play button to listen back
+### Database Migration (SQL)
+```text
+-- Drop old public policies
+DROP POLICY "Public read access" ON journal_entries;
+DROP POLICY "Public insert access" ON journal_entries;
+DROP POLICY "Public update access" ON journal_entries;
+DROP POLICY "Public delete access" ON journal_entries;
 
----
+-- Set user_id default to authenticated user
+ALTER TABLE journal_entries
+  ALTER COLUMN user_id SET DEFAULT auth.uid();
 
-## Technical Plan
+-- New per-user policies
+CREATE POLICY "Users read own entries" ON journal_entries
+  FOR SELECT USING (auth.uid() = user_id);
 
-### 1. Database Changes
-- Add an `audio_url` column (nullable text) to the `journal_entries` table to store the link to the audio file
-- Create a storage bucket called `journal-audio` (public) for audio files
-- Add RLS policies for public read/write on the storage bucket
+CREATE POLICY "Users insert own entries" ON journal_entries
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
 
-### 2. New Component: `VoiceRecorder`
-A reusable React component (`src/components/VoiceRecorder.tsx`) that:
-- Uses the **Web Speech API** (`webkitSpeechRecognition`) for speech-to-text transcription
-- Uses the **MediaRecorder API** to capture the audio as a `.webm` file
-- Shows a mic icon button -- toggles between idle (mic icon) and recording (red pulsing stop icon)
-- Calls `onTranscript(text)` to append recognized speech to the journal textarea
-- Calls `onRecordingComplete(blob)` when recording stops, providing the audio blob
+CREATE POLICY "Users update own entries" ON journal_entries
+  FOR UPDATE USING (auth.uid() = user_id);
 
-### 3. Update Journal Page (`src/pages/Index.tsx`)
-- Import and render `VoiceRecorder` next to the Analyze button
-- When voice text arrives, append it to the existing text state
-- When recording completes, upload the audio blob to cloud storage
-- Save the resulting `audio_url` in the journal entry
+CREATE POLICY "Users delete own entries" ON journal_entries
+  FOR DELETE USING (auth.uid() = user_id);
+```
 
-### 4. Update Storage Layer (`src/lib/storage.ts`)
-- Add `audioUrl` optional field to the `JournalEntry` interface
-- Update `saveEntry` to include the `audio_url` column
-- Update `getEntries` to map the `audio_url` field
-- Add a helper function `uploadAudio(blob)` that uploads to the `journal-audio` bucket and returns the public URL
+### Files to Modify
 
-### 5. Update Dashboard (`src/pages/Dashboard.tsx`)
-- For entries that have an `audioUrl`, show a small play/pause button
-- Use an HTML `<audio>` element to play back the recording inline
+1. **`src/App.tsx`** -- Wrap `/`, `/results`, `/dashboard` routes with `ProtectedRoute`
+2. **`src/lib/storage.ts`**:
+   - `saveEntry`: fetch `auth.uid()` and set `user_id`
+   - `getEntries`: paginated loop to fetch all rows
+   - `clearEntries`: simplify the delete filter
+3. **Database migration** -- Replace RLS policies and update `user_id` default
 
-### Technologies Used
-- **Web Speech API** -- browser-native speech recognition (TypeScript)
-- **MediaRecorder API** -- browser-native audio recording (TypeScript)
-- **Lovable Cloud Storage** -- file storage for audio blobs
-- **React + TypeScript** -- UI components
-- **No Python, no external APIs, no API keys required**
+### Impact on Existing Data
+- Old entries with the dummy `user_id` (`00000000-...`) will no longer be visible to anyone since they don't match any real user. This is the correct privacy behavior -- those shared entries should not be accessible.
 
