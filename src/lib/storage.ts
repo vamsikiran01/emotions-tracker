@@ -90,7 +90,10 @@ export async function clearEntries(): Promise<void> {
 }
 
 export async function uploadAudio(blob: Blob): Promise<string | null> {
-  const filename = `${crypto.randomUUID()}.webm`;
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const filename = `${user.id}/${crypto.randomUUID()}.webm`;
   const { error } = await supabase.storage
     .from('journal-audio')
     .upload(filename, blob, { contentType: 'audio/webm' });
@@ -100,8 +103,10 @@ export async function uploadAudio(blob: Blob): Promise<string | null> {
     return null;
   }
 
-  const { data } = supabase.storage.from('journal-audio').getPublicUrl(filename);
-  return data.publicUrl;
+  const { data } = await supabase.storage
+    .from('journal-audio')
+    .createSignedUrl(filename, 31536000); // 1 year
+  return data?.signedUrl || null;
 }
 
 // These utility functions remain synchronous as they operate on already-fetched data
