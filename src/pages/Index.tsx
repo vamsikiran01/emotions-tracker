@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, Loader2, PenLine } from 'lucide-react';
+import { Sparkles, Loader2, PenLine, LogOut, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
@@ -10,12 +10,32 @@ import { saveEntry, uploadAudio, JournalEntry } from '@/lib/storage';
 import { toast } from '@/hooks/use-toast';
 import { isEnglishWord } from '@/lib/englishWords';
 import VoiceRecorder from '@/components/VoiceRecorder';
+import { useAuth } from '@/hooks/useAuth';
+import { lovable } from '@/integrations/lovable';
 
 const Index = () => {
   const [text, setText] = useState('');
   const [analyzing, setAnalyzing] = useState(false);
   const audioBlobRef = useRef<Blob | null>(null);
   const navigate = useNavigate();
+  const { signOut } = useAuth();
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/login');
+  };
+
+  const handleSwitchAccount = async () => {
+    await signOut();
+    try {
+      await lovable.auth.signInWithOAuth('google', {
+        redirect_uri: window.location.origin,
+      });
+    } catch (err) {
+      console.error('Switch account error:', err);
+      navigate('/login');
+    }
+  };
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
@@ -160,6 +180,28 @@ const Index = () => {
         <p className="text-center text-xs text-muted-foreground mt-6">
           Your journal entries are securely stored in the cloud. 🔒
         </p>
+      </div>
+
+      {/* Floating account actions - bottom right */}
+      <div className="fixed bottom-6 right-6 flex flex-col gap-2 z-50">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleSwitchAccount}
+          className="gap-2 rounded-full shadow-lg bg-background/90 backdrop-blur-sm border-border/50"
+        >
+          <RefreshCw className="h-4 w-4" />
+          Switch Account
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleLogout}
+          className="gap-2 rounded-full shadow-lg bg-background/90 backdrop-blur-sm border-border/50 text-destructive hover:text-destructive"
+        >
+          <LogOut className="h-4 w-4" />
+          Logout
+        </Button>
       </div>
     </div>
   );
