@@ -1,0 +1,2 @@
+ALTER TABLE public.journal_entries FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.user_roles FORCE ROW LEVEL SECURITY;
