@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Flame, Shield, TrendingUp, BarChart3, CalendarDays, Trash2, Database, Pencil, Save, X } from 'lucide-react';
+import { Flame, Shield, TrendingUp, BarChart3, CalendarDays, Trash2, Database, Pencil, Save, X, Volume2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -235,7 +235,14 @@ const Dashboard = () => {
                               </div>
                             </div>
                           ) : (
-                            <p className="text-sm text-foreground line-clamp-2">{entry.text}</p>
+                            <>
+                              <p className="text-sm text-foreground line-clamp-2">{entry.text}</p>
+                              {entry.audioUrl && (
+                                <audio controls className="mt-2 w-full h-8" preload="none">
+                                  <source src={entry.audioUrl} type="audio/webm" />
+                                </audio>
+                              )}
+                            </>
                           )}
                         </div>
                         {!isEditing && (

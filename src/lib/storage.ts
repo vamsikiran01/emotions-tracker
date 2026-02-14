@@ -6,6 +6,7 @@ export interface JournalEntry {
   date: string;
   text: string;
   result: EmotionResult;
+  audioUrl?: string;
 }
 
 export async function getEntries(): Promise<JournalEntry[]> {
@@ -24,6 +25,7 @@ export async function getEntries(): Promise<JournalEntry[]> {
     date: row.created_at,
     text: row.text,
     result: row.result as unknown as EmotionResult,
+    audioUrl: (row as any).audio_url || undefined,
   }));
 }
 
@@ -32,7 +34,8 @@ export async function saveEntry(entry: JournalEntry): Promise<void> {
     text: entry.text,
     result: entry.result as any,
     created_at: entry.date,
-  });
+    ...(entry.audioUrl ? { audio_url: entry.audioUrl } : {}),
+  } as any);
 
   if (error) console.error('Error saving entry:', error);
 }
@@ -65,6 +68,21 @@ export async function clearEntries(): Promise<void> {
     .neq('id', '00000000-0000-0000-0000-000000000000');
 
   if (error) console.error('Error clearing entries:', error);
+}
+
+export async function uploadAudio(blob: Blob): Promise<string | null> {
+  const filename = `${crypto.randomUUID()}.webm`;
+  const { error } = await supabase.storage
+    .from('journal-audio')
+    .upload(filename, blob, { contentType: 'audio/webm' });
+
+  if (error) {
+    console.error('Error uploading audio:', error);
+    return null;
+  }
+
+  const { data } = supabase.storage.from('journal-audio').getPublicUrl(filename);
+  return data.publicUrl;
 }
 
 // These utility functions remain synchronous as they operate on already-fetched data

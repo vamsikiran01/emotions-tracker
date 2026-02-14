@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sparkles, Loader2, PenLine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -6,13 +6,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { analyzeEmotionWithAI, AFFIRMATIONS, EMOTION_WORDS_SET, EMOTION_META } from '@/lib/emotionEngine';
 import type { EmotionType, EmotionResult } from '@/lib/emotionEngine';
-import { saveEntry, JournalEntry } from '@/lib/storage';
+import { saveEntry, uploadAudio, JournalEntry } from '@/lib/storage';
 import { toast } from '@/hooks/use-toast';
 import { isEnglishWord } from '@/lib/englishWords';
+import VoiceRecorder from '@/components/VoiceRecorder';
 
 const Index = () => {
   const [text, setText] = useState('');
   const [analyzing, setAnalyzing] = useState(false);
+  const audioBlobRef = useRef<Blob | null>(null);
   const navigate = useNavigate();
 
   const today = new Date().toLocaleDateString('en-US', {
@@ -70,11 +72,20 @@ const Index = () => {
       } else {
         result = await analyzeEmotionWithAI(text);
       }
+      // Upload audio if available
+      let audioUrl: string | undefined;
+      if (audioBlobRef.current) {
+        const url = await uploadAudio(audioBlobRef.current);
+        if (url) audioUrl = url;
+        audioBlobRef.current = null;
+      }
+
       const entry: JournalEntry = {
         id: crypto.randomUUID(),
         date: new Date().toISOString(),
         text: text.trim(),
         result,
+        audioUrl,
       };
       await saveEntry(entry);
       navigate('/results', { state: { entry } });
@@ -117,24 +128,31 @@ const Index = () => {
               <span className="text-xs text-muted-foreground text-center sm:text-left">
                 {text.length > 0 ? `${text.split(/\s+/).filter(Boolean).length} words` : 'Start writing...'}
               </span>
-              <Button
-                onClick={handleAnalyze}
-                disabled={!text.trim() || analyzing}
-                className="gap-2 rounded-full px-6 bg-primary hover:bg-primary/90 text-primary-foreground shadow-md min-h-[44px]"
-                size="lg"
-              >
-                {analyzing ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Analyzing...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-4 w-4" />
-                    Analyze My Emotions
-                  </>
-                )}
-              </Button>
+              <div className="flex items-center gap-2 justify-center sm:justify-end">
+                <VoiceRecorder
+                  onTranscript={(transcript) => setText(prev => prev ? `${prev} ${transcript}` : transcript)}
+                  onRecordingComplete={(blob) => { audioBlobRef.current = blob; }}
+                  disabled={analyzing}
+                />
+                <Button
+                  onClick={handleAnalyze}
+                  disabled={!text.trim() || analyzing}
+                  className="gap-2 rounded-full px-6 bg-primary hover:bg-primary/90 text-primary-foreground shadow-md min-h-[44px]"
+                  size="lg"
+                >
+                  {analyzing ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Analyzing...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4" />
+                      Analyze My Emotions
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
