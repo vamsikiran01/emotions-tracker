@@ -1,31 +1,61 @@
 
 
-# Fix Persistent "Private Journal Entries Exposed" Security Finding
+# Fix Authentication, Microphone, and Fresh Start
 
-## Summary
+## Problems Identified
 
-The database is already properly secured -- all RLS policies on `journal_entries` are correctly scoped to the `authenticated` role with `auth.uid() = user_id`. The recurring error is a **stale finding from the `supabase_lov` security scanner** that was never cleared. No database or code changes are needed.
-
-## What's Actually Happening
-
-The `supabase_lov` scanner has a cached finding (`journal_entries_public_exposure`) that keeps appearing even though:
-- RLS is enabled AND forced on the table
-- All 4 policies (SELECT, INSERT, UPDATE, DELETE) target only `authenticated` role
-- Each policy checks `auth.uid() = user_id`
-
-Anonymous users **cannot** read journal entries. The security is working correctly.
+1. **Existing users can't sign up again** -- There are 3 existing accounts in the database blocking re-registration with those emails
+2. **Login fails for some accounts** -- Stale sessions (the auth logs show "Session not found" errors) are causing 401 errors
+3. **send-login-alert edge function returns 401** -- This fires on every sign-in and fails because the session token is sometimes stale, causing a visible error/blank screen
+4. **Microphone button doesn't work on mobile PWA** -- The `audio/webm` MIME type is not supported on iOS/Safari; also `navigator.permissions.query('microphone')` throws on mobile browsers, potentially blocking the flow
 
 ## Plan
 
-1. **Delete the stale `supabase_lov` scanner finding** (`journal_entries_public_exposure`) so it stops appearing
-2. **Run a fresh security scan** to confirm zero error-level issues remain
-3. **Verify** no new findings are generated
+### 1. Clear All Existing Auth Users (Database)
+
+Delete all 3 existing user accounts from the database so the app starts fresh. New visitors will need to create an account first.
+
+- Delete all rows from `journal_entries` (they reference users being removed)
+- Delete all rows from `user_roles`
+- Delete all users from `auth.users`
+
+### 2. Fix the send-login-alert 401 Error
+
+The edge function call in `useAuth.ts` fires during `onAuthStateChange` with `SIGNED_IN`, but the token can be stale or the function fails, causing a visible error. Fix:
+
+- Make the login alert call **non-blocking and silent** -- wrap it so errors are fully swallowed and never cause a blank screen
+- Add the required `apikey` header to the fetch call (the edge function needs it)
+
+### 3. Fix Login Page Error Handling
+
+Update `Login.tsx` to show clearer error messages:
+
+- For "User already registered" on signup: show "This email already has an account. Try signing in instead."
+- For "Invalid login credentials": show "Incorrect email or password."
+
+### 4. Fix Microphone on Mobile (iOS/Android PWA)
+
+Two issues prevent microphone from working on mobile:
+
+- **MIME type**: `audio/webm` is not supported on iOS Safari. Use `MediaRecorder.isTypeSupported()` to pick a supported format (`audio/webm` or `audio/mp4`)
+- **permissions.query**: Calling `navigator.permissions.query({ name: 'microphone' })` throws on some mobile browsers. The current catch block handles this, but the error can still block the flow. Simplify by removing the permissions pre-check entirely and just calling `getUserMedia` directly (the browser will prompt for permission)
+- **SpeechRecognition**: Not available on all mobile browsers. Make it optional -- if unavailable, still allow audio recording without live transcription
+
+### 5. Remove Any Remaining Branding Issues
+
+Verify the Header and all pages only show "Emo Track" with no external branding.
+
+---
 
 ## Technical Details
 
-- Scanner: `supabase_lov` (not `agent_security`)
-- Finding internal_id: `journal_entries_public_exposure`
-- Action: Delete this specific finding from the `supabase_lov` scanner
-- No SQL migrations needed -- the database policies are already correct
-- No application code changes needed -- authentication via Google OAuth + ProtectedRoute is already in place
+### Files to modify:
+- **`src/hooks/useAuth.ts`** -- Fix login alert call (add apikey header, fully silence errors)
+- **`src/pages/Login.tsx`** -- Better error messages for duplicate signup and wrong credentials
+- **`src/components/VoiceRecorder.tsx`** -- Fix mobile MIME type detection, remove permissions.query pre-check, make SpeechRecognition optional
+
+### Database operations:
+- Delete from `journal_entries`, `user_roles`, and `auth.users` to start fresh
+
+### No schema or migration changes needed.
 
