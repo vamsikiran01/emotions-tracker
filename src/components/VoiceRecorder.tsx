@@ -29,6 +29,23 @@ const VoiceRecorder = ({ onTranscript, onRecordingComplete, disabled }: VoiceRec
     }
 
     try {
+      // Check if permission was previously denied
+      if (navigator.permissions) {
+        try {
+          const permStatus = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+          if (permStatus.state === 'denied') {
+            toast({
+              title: 'Microphone blocked',
+              description: 'Microphone access was denied. Please click the lock/site-settings icon in your browser address bar, allow microphone access, then reload the page.',
+              variant: 'destructive',
+            });
+            return;
+          }
+        } catch {
+          // permissions.query may not support 'microphone' in all browsers, continue
+        }
+      }
+
       // Start media recording
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
@@ -75,9 +92,17 @@ const VoiceRecorder = ({ onTranscript, onRecordingComplete, disabled }: VoiceRec
       recognition.start();
       recognitionRef.current = recognition;
       setRecording(true);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Mic access error:', err);
-      toast({ title: 'Microphone access denied', description: 'Please allow microphone access to use voice input.', variant: 'destructive' });
+      if (err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError') {
+        toast({
+          title: 'Microphone access blocked',
+          description: 'You previously denied microphone access. To re-enable it, click the lock/site-settings icon in your browser\'s address bar, set Microphone to "Allow", then reload the page.',
+          variant: 'destructive',
+        });
+      } else {
+        toast({ title: 'Microphone error', description: 'Could not access microphone. Please check your device settings.', variant: 'destructive' });
+      }
     }
   }, [onTranscript, onRecordingComplete]);
 
