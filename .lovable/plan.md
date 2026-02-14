@@ -1,57 +1,33 @@
 
+# Fix: Dashboard Not Showing Data + Published URL
 
-# Fix Input Validation and Update PWA Icon
+## Root Cause
+The dashboard and other routes are not wrapped with the `ProtectedRoute` component. This means users can visit `/dashboard` without being logged in. Since the database requires authentication (`auth.uid() = user_id`) to return data, an unauthenticated user sees nothing.
 
-## Issue 1: Meaningless Text Passes Validation
+The `ProtectedRoute` component already exists in `src/components/ProtectedRoute.tsx` -- it just needs to be used.
 
-The current validation only checks if words contain vowels, which lets gibberish like "Jao w8w nhb wh aia" through because words like "Jao" and "aia" technically contain vowels.
+## Changes
 
-### Improved Validation Strategy
+### 1. Protect Routes in `src/App.tsx`
+Wrap the Journal (`/`), Results (`/results`), and Dashboard (`/dashboard`) routes with `ProtectedRoute` so users must be logged in to access them. Add the `/login` route.
 
-Update `isValidEntry` in `src/pages/Index.tsx` with stricter checks:
-
-- **Minimum word length**: Require at least 3 words (keep existing)
-- **Minimum entry length**: Require at least 15 characters total
-- **Vowel-consonant pattern check**: Real words typically have a mix of vowels and consonants in natural patterns. Reject words that are just random characters
-- **Dictionary-like heuristic**: Check that words follow common English letter patterns (no excessive consecutive consonants like "nhb", "w8w")
-- **Reject words with numbers mixed in** (like "w8w")
-- **Require a higher threshold**: At least 60% of words must pass the meaningful check
-- **Average word length check**: Reject entries where average word length is suspiciously short (under 2 chars)
-
-```typescript
-const isValidEntry = (input: string): boolean => {
-  const trimmed = input.trim();
-  const words = trimmed.split(/\s+/).filter(Boolean);
-  if (words.length < 3) return false;
-  if (trimmed.length < 15) return false;
-
-  const isMeaningfulWord = (word: string): boolean => {
-    if (word.length < 2) return false;
-    // Reject words with numbers
-    if (/\d/.test(word)) return false;
-    // Must contain at least one vowel
-    if (!/[aeiou]/i.test(word)) return false;
-    // Reject excessive consecutive consonants (3+)
-    if (/[^aeiou\s]{4,}/i.test(word)) return false;
-    return true;
-  };
-
-  const meaningfulWords = words.filter(isMeaningfulWord);
-  return meaningfulWords.length >= words.length * 0.6;
-};
+```
+/ --> ProtectedRoute --> Index
+/results --> ProtectedRoute --> Results
+/dashboard --> ProtectedRoute --> Dashboard
+/login --> Login (public)
 ```
 
-## Issue 2: PWA Home Screen Icon
+This single change ensures:
+- Users are redirected to `/login` if not authenticated
+- Once logged in, `auth.uid()` is available, so RLS policies return the correct data
+- The published URL will also work because the same auth flow applies
 
-Generate a new `public/icon-192x192.png` with:
+### 2. No Database Changes Needed
+The RLS policies are already correct and PERMISSIVE. The issue is purely that the app doesn't enforce login before accessing the dashboard.
 
-- A brain icon with heartbeat/pulse lines running through the middle
-- Light blue / sky blue background
-- No text -- just the icon
-- Clean, modern, minimalist design
-
-### Technical Steps
-
-1. **Edit** `src/pages/Index.tsx` -- update the `isValidEntry` function with stricter validation
-2. **Generate** a new `public/icon-192x192.png` -- brain with pulse lines on sky blue background, no text
-
+## Technical Details
+- Import `ProtectedRoute` and `Login` in `App.tsx`
+- Wrap the three main routes with `<ProtectedRoute>`
+- Add `<Route path="/login" element={<Login />} />`
+- No other files need changes
