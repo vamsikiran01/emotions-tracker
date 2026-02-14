@@ -12,6 +12,53 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Authenticate the caller
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const callerClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await callerClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const callerId = claimsData.claims.sub;
+
+    // Check caller has admin role
+    const adminClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    const { data: roleRow } = await adminClient
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", callerId)
+      .eq("role", "admin")
+      .maybeSingle();
+
+    if (!roleRow) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Proceed with notification logic
     const resendKey = Deno.env.get("RESEND_API_KEY");
     if (!resendKey) {
       return new Response(JSON.stringify({ error: "Email service not configured" }), {
@@ -20,13 +67,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
-
-    // Get all users
-    const { data: { users }, error: usersError } = await supabase.auth.admin.listUsers();
+    const { data: { users }, error: usersError } = await adminClient.auth.admin.listUsers();
     if (usersError) throw usersError;
 
     const today = new Date();
@@ -38,8 +79,7 @@ Deno.serve(async (req) => {
     for (const user of users) {
       if (!user.email) continue;
 
-      // Get today's entries for this user
-      const { data: entries, error: entriesError } = await supabase
+      const { data: entries, error: entriesError } = await adminClient
         .from("journal_entries")
         .select("text, result, created_at")
         .eq("user_id", user.id)
@@ -55,7 +95,6 @@ Deno.serve(async (req) => {
       let html: string;
 
       if (entries && entries.length > 0) {
-        // Journal summary email
         const emotions = entries.map((e: any) => {
           const r = typeof e.result === "string" ? JSON.parse(e.result) : e.result;
           return r?.primaryEmotion || "Unknown";
@@ -70,7 +109,6 @@ Deno.serve(async (req) => {
           <p>Keep up the great work! Consistent journaling helps you understand your emotional patterns. 💛</p>
         `;
       } else {
-        // Streak reminder email
         subject = "Don't Break Your Streak! 🔥";
         html = `
           <h2>Streak Reminder</h2>
