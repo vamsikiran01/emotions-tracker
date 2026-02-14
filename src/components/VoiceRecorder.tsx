@@ -14,6 +14,14 @@ interface SpeechRecognitionEvent {
   resultIndex: number;
 }
 
+function getSupportedMimeType(): string {
+  const types = ['audio/webm', 'audio/mp4', 'audio/ogg', 'audio/wav', ''];
+  for (const t of types) {
+    if (t === '' || MediaRecorder.isTypeSupported(t)) return t;
+  }
+  return '';
+}
+
 const VoiceRecorder = ({ onTranscript, onRecordingComplete, disabled }: VoiceRecorderProps) => {
   const [recording, setRecording] = useState(false);
   const recognitionRef = useRef<any>(null);
@@ -21,34 +29,13 @@ const VoiceRecorder = ({ onTranscript, onRecordingComplete, disabled }: VoiceRec
   const chunksRef = useRef<Blob[]>([]);
 
   const startRecording = useCallback(async () => {
-    // Check browser support
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      toast({ title: 'Not supported', description: 'Speech recognition is not supported in this browser. Try Chrome.', variant: 'destructive' });
-      return;
-    }
-
     try {
-      // Check if permission was previously denied
-      if (navigator.permissions) {
-        try {
-          const permStatus = await navigator.permissions.query({ name: 'microphone' as PermissionName });
-          if (permStatus.state === 'denied') {
-            toast({
-              title: 'Microphone blocked',
-              description: 'Microphone access was denied. Please click the lock/site-settings icon in your browser address bar, allow microphone access, then reload the page.',
-              variant: 'destructive',
-            });
-            return;
-          }
-        } catch {
-          // permissions.query may not support 'microphone' in all browsers, continue
-        }
-      }
-
-      // Start media recording
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+
+      // Pick a supported MIME type
+      const mimeType = getSupportedMimeType();
+      const options: MediaRecorderOptions = mimeType ? { mimeType } : {};
+      const mediaRecorder = new MediaRecorder(stream, options);
       chunksRef.current = [];
 
       mediaRecorder.ondataavailable = (e) => {
@@ -56,7 +43,7 @@ const VoiceRecorder = ({ onTranscript, onRecordingComplete, disabled }: VoiceRec
       };
 
       mediaRecorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        const blob = new Blob(chunksRef.current, { type: mimeType || 'audio/webm' });
         onRecordingComplete(blob);
         stream.getTracks().forEach(t => t.stop());
       };
@@ -64,40 +51,45 @@ const VoiceRecorder = ({ onTranscript, onRecordingComplete, disabled }: VoiceRec
       mediaRecorder.start();
       mediaRecorderRef.current = mediaRecorder;
 
-      // Start speech recognition
-      const recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = 'en-US';
+      // Start speech recognition (optional — not available on all mobile browsers)
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        try {
+          const recognition = new SpeechRecognition();
+          recognition.continuous = true;
+          recognition.interimResults = true;
+          recognition.lang = 'en-US';
 
-      recognition.onresult = (event: SpeechRecognitionEvent) => {
-        let finalTranscript = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript + ' ';
-          }
-        }
-        if (finalTranscript.trim()) {
-          onTranscript(finalTranscript.trim());
-        }
-      };
+          recognition.onresult = (event: SpeechRecognitionEvent) => {
+            let finalTranscript = '';
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+              if (event.results[i].isFinal) {
+                finalTranscript += event.results[i][0].transcript + ' ';
+              }
+            }
+            if (finalTranscript.trim()) {
+              onTranscript(finalTranscript.trim());
+            }
+          };
 
-      recognition.onerror = (event: any) => {
-        console.error('Speech recognition error:', event.error);
-        if (event.error !== 'aborted') {
-          toast({ title: 'Voice error', description: `Speech recognition error: ${event.error}`, variant: 'destructive' });
-        }
-      };
+          recognition.onerror = (event: any) => {
+            console.error('Speech recognition error:', event.error);
+          };
 
-      recognition.start();
-      recognitionRef.current = recognition;
+          recognition.start();
+          recognitionRef.current = recognition;
+        } catch {
+          // Speech recognition unavailable, audio recording still works
+        }
+      }
+
       setRecording(true);
     } catch (err: any) {
       console.error('Mic access error:', err);
       if (err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError') {
         toast({
           title: 'Microphone access blocked',
-          description: 'You previously denied microphone access. To re-enable it, click the lock/site-settings icon in your browser\'s address bar, set Microphone to "Allow", then reload the page.',
+          description: 'Please allow microphone access in your browser or device settings, then try again.',
           variant: 'destructive',
         });
       } else {
@@ -107,7 +99,7 @@ const VoiceRecorder = ({ onTranscript, onRecordingComplete, disabled }: VoiceRec
   }, [onTranscript, onRecordingComplete]);
 
   const stopRecording = useCallback(() => {
-    recognitionRef.current?.stop();
+    try { recognitionRef.current?.stop(); } catch {}
     recognitionRef.current = null;
     mediaRecorderRef.current?.stop();
     mediaRecorderRef.current = null;

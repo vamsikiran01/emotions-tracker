@@ -49,9 +49,15 @@ const Login = () => {
         if (error) throw error;
       }
     } catch (err: any) {
+      let description = err.message || 'Something went wrong.';
+      if (err.message?.includes('User already registered')) {
+        description = 'This email already has an account. Try signing in instead.';
+      } else if (err.message?.includes('Invalid login credentials')) {
+        description = 'Incorrect email or password.';
+      }
       toast({
         title: isSignUp ? 'Sign up failed' : 'Sign in failed',
-        description: err.message || 'Something went wrong.',
+        description,
         variant: 'destructive',
       });
     } finally {
