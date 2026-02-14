@@ -10,30 +10,49 @@ export interface JournalEntry {
 }
 
 export async function getEntries(): Promise<JournalEntry[]> {
-  const { data, error } = await supabase
-    .from('journal_entries')
-    .select('*')
-    .order('created_at', { ascending: false });
+  const allRows: any[] = [];
+  const PAGE = 1000;
+  let offset = 0;
 
-  if (error) {
-    console.error('Error fetching entries:', error);
-    return [];
+  while (true) {
+    const { data, error } = await supabase
+      .from('journal_entries')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .range(offset, offset + PAGE - 1);
+
+    if (error) {
+      console.error('Error fetching entries:', error);
+      break;
+    }
+
+    if (!data || data.length === 0) break;
+    allRows.push(...data);
+    if (data.length < PAGE) break;
+    offset += PAGE;
   }
 
-  return (data || []).map(row => ({
+  return allRows.map(row => ({
     id: row.id,
     date: row.created_at,
     text: row.text,
     result: row.result as unknown as EmotionResult,
-    audioUrl: (row as any).audio_url || undefined,
+    audioUrl: row.audio_url || undefined,
   }));
 }
 
 export async function saveEntry(entry: JournalEntry): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    console.error('Cannot save entry: not authenticated');
+    return;
+  }
+
   const { error } = await supabase.from('journal_entries').insert({
     text: entry.text,
     result: entry.result as any,
     created_at: entry.date,
+    user_id: user.id,
     ...(entry.audioUrl ? { audio_url: entry.audioUrl } : {}),
   } as any);
 
@@ -65,7 +84,7 @@ export async function clearEntries(): Promise<void> {
   const { error } = await supabase
     .from('journal_entries')
     .delete()
-    .neq('id', '00000000-0000-0000-0000-000000000000');
+    .gte('created_at', '1970-01-01');
 
   if (error) console.error('Error clearing entries:', error);
 }
