@@ -28,11 +28,7 @@ export async function getEntries(): Promise<JournalEntry[]> {
 }
 
 export async function saveEntry(entry: JournalEntry): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-
   const { error } = await supabase.from('journal_entries').insert({
-    user_id: user.id,
     text: entry.text,
     result: entry.result as any,
     created_at: entry.date,
@@ -63,13 +59,10 @@ export async function deleteEntry(id: string): Promise<void> {
 }
 
 export async function clearEntries(): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-
   const { error } = await supabase
     .from('journal_entries')
     .delete()
-    .eq('user_id', user.id);
+    .neq('id', '00000000-0000-0000-0000-000000000000');
 
   if (error) console.error('Error clearing entries:', error);
 }
