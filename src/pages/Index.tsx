@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, Loader2, PenLine, LogOut, RefreshCw } from 'lucide-react';
+import { Sparkles, Loader2, PenLine, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
@@ -11,7 +11,6 @@ import { toast } from '@/hooks/use-toast';
 import { isEnglishWord } from '@/lib/englishWords';
 import VoiceRecorder from '@/components/VoiceRecorder';
 import { useAuth } from '@/hooks/useAuth';
-import { lovable } from '@/integrations/lovable';
 
 const Index = () => {
   const [text, setText] = useState('');
@@ -25,17 +24,6 @@ const Index = () => {
     navigate('/login');
   };
 
-  const handleSwitchAccount = async () => {
-    await signOut();
-    try {
-      await lovable.auth.signInWithOAuth('google', {
-        redirect_uri: window.location.origin,
-      });
-    } catch (err) {
-      console.error('Switch account error:', err);
-      navigate('/login');
-    }
-  };
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
@@ -182,17 +170,8 @@ const Index = () => {
         </p>
       </div>
 
-      {/* Floating account actions - bottom right */}
-      <div className="fixed bottom-6 right-6 flex flex-col gap-2 z-50">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleSwitchAccount}
-          className="gap-2 rounded-full shadow-lg bg-background/90 backdrop-blur-sm border-border/50"
-        >
-          <RefreshCw className="h-4 w-4" />
-          Switch Account
-        </Button>
+      {/* Floating logout button */}
+      <div className="fixed bottom-6 right-6 z-50">
         <Button
           variant="outline"
           size="sm"
