@@ -15,6 +15,7 @@ import { useAuth } from '@/hooks/useAuth';
 const Index = () => {
   const [text, setText] = useState('');
   const [analyzing, setAnalyzing] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
   const audioBlobRef = useRef<Blob | null>(null);
   const navigate = useNavigate();
   const { signOut } = useAuth();
@@ -140,11 +141,12 @@ const Index = () => {
                 <VoiceRecorder
                   onTranscript={(transcript) => setText(prev => prev ? `${prev} ${transcript}` : transcript)}
                   onRecordingComplete={(blob) => { audioBlobRef.current = blob; }}
+                  onTranscribingChange={setTranscribing}
                   disabled={analyzing}
                 />
                 <Button
                   onClick={handleAnalyze}
-                  disabled={!text.trim() || analyzing}
+                  disabled={!text.trim() || analyzing || transcribing}
                   className="gap-2 rounded-full px-6 bg-primary hover:bg-primary/90 text-primary-foreground shadow-md min-h-[44px]"
                   size="lg"
                 >
