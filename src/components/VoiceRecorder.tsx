@@ -27,6 +27,7 @@ const VoiceRecorder = ({ onTranscript, onRecordingComplete, disabled }: VoiceRec
   const recognitionRef = useRef<any>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const isListeningRef = useRef(false);
 
   const startRecording = useCallback(async () => {
     try {
@@ -51,36 +52,42 @@ const VoiceRecorder = ({ onTranscript, onRecordingComplete, disabled }: VoiceRec
       mediaRecorder.start();
       mediaRecorderRef.current = mediaRecorder;
 
-      // Start speech recognition only on desktop — mobile browsers show
-      // intrusive error popups when the API is unavailable or blocked.
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      if (!isMobile) {
-        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-        if (SpeechRecognition) {
-          try {
-            const recognition = new SpeechRecognition();
-            recognition.continuous = true;
-            recognition.interimResults = true;
-            recognition.lang = 'en-US';
+      // Start speech recognition on all platforms with silent error handling
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        try {
+          const recognition = new SpeechRecognition();
+          recognition.continuous = true;
+          recognition.interimResults = true;
+          recognition.lang = 'en-US';
 
-            recognition.onresult = (event: SpeechRecognitionEvent) => {
-              let finalTranscript = '';
-              for (let i = event.resultIndex; i < event.results.length; i++) {
-                if (event.results[i].isFinal) {
-                  finalTranscript += event.results[i][0].transcript + ' ';
-                }
+          recognition.onresult = (event: SpeechRecognitionEvent) => {
+            let finalTranscript = '';
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+              if (event.results[i].isFinal) {
+                finalTranscript += event.results[i][0].transcript + ' ';
               }
-              if (finalTranscript.trim()) {
-                onTranscript(finalTranscript.trim());
-              }
-            };
+            }
+            if (finalTranscript.trim()) {
+              onTranscript(finalTranscript.trim());
+            }
+          };
 
-            recognition.onerror = () => { /* silent */ };
-            recognition.start();
-            recognitionRef.current = recognition;
-          } catch {
-            // Speech recognition unavailable, audio recording still works
-          }
+          // Silently catch all errors — no popups, no toasts
+          recognition.onerror = () => { /* silent */ };
+
+          // Auto-restart when recognition ends if still recording (critical for mobile)
+          recognition.onend = () => {
+            if (isListeningRef.current) {
+              try { recognition.start(); } catch { /* silent */ }
+            }
+          };
+
+          isListeningRef.current = true;
+          recognition.start();
+          recognitionRef.current = recognition;
+        } catch {
+          // Speech recognition unavailable, audio recording still works
         }
       }
 
@@ -100,6 +107,7 @@ const VoiceRecorder = ({ onTranscript, onRecordingComplete, disabled }: VoiceRec
   }, [onTranscript, onRecordingComplete]);
 
   const stopRecording = useCallback(() => {
+    isListeningRef.current = false;
     try { recognitionRef.current?.stop(); } catch {}
     recognitionRef.current = null;
     mediaRecorderRef.current?.stop();
