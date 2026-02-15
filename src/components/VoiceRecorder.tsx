@@ -113,9 +113,10 @@ const VoiceRecorder = ({ onTranscript, onRecordingComplete, onTranscribingChange
       mediaRecorder.start();
       mediaRecorderRef.current = mediaRecorder;
 
-      // Try browser speech recognition (best effort)
+      // Try browser speech recognition (best effort, desktop only)
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      if (SpeechRecognition) {
+      if (!isMobile && SpeechRecognition) {
         try {
           const recognition = new SpeechRecognition();
           recognition.continuous = true;
