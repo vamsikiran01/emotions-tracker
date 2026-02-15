@@ -1,47 +1,60 @@
 
 
-# Fix Mobile Speech-to-Text Transcription
+# Fix Mobile Speech-to-Text: Server-Side Transcription Fallback
 
 ## Problem
 
-The previous fix disabled `SpeechRecognition` entirely on mobile devices to prevent intrusive browser popups. This solved the popup issue but also removed the speech-to-text functionality -- so spoken words no longer appear in the journal box on mobile.
+The browser's native `SpeechRecognition` API is fundamentally unreliable on mobile browsers (especially in PWA/webview contexts). Despite multiple attempts to make it work with silent error handling and auto-restart, it still fails to produce transcription text on many mobile devices. This is a known limitation of the Web Speech API on mobile -- it is not a code bug we can fix.
 
-## Solution
+## Solution: Server-Side Audio Transcription
 
-Re-enable `SpeechRecognition` on all platforms (including mobile), but wrap it defensively so that:
+Instead of relying solely on the browser's `SpeechRecognition` API, we add a **server-side fallback**. When the user stops recording, if no transcript was captured by the browser API, we send the recorded audio to a backend function that uses Gemini (via Lovable AI) to transcribe it. This approach works on every device because it only depends on `MediaRecorder`, which already works on mobile.
 
-1. All errors are silently caught -- no popups, no toasts, no console errors
-2. If the API is unavailable or blocked, audio recording still works (just without live transcription)
-3. Add an `onend` auto-restart handler so recognition doesn't stop after brief pauses in speech
-4. Use a ref flag (`isListeningRef`) to track whether the user intends to keep recording, so auto-restart only happens while actively recording
+```text
+Flow:
+  User clicks mic -> MediaRecorder starts + SpeechRecognition tries (best effort)
+  User clicks stop ->
+    IF browser captured transcript -> use it (already in journal box)
+    IF no transcript -> send audio blob to backend -> get text back -> put in journal box
+```
 
 ## What Changes
 
-**File: `src/components/VoiceRecorder.tsx`**
+### 1. New Backend Function: `supabase/functions/transcribe-audio/index.ts`
 
-- Remove the `isMobile` check that skips `SpeechRecognition` on mobile
-- Add an `isListeningRef` to track active recording state
-- Add `recognition.onend` handler that auto-restarts recognition if still recording (critical for mobile where recognition stops after silence)
-- Keep all error handlers silent (empty callbacks) to prevent any popups
-- Wrap `recognition.start()` in a try/catch to handle cases where the API exists but fails to start
-- On stop, set `isListeningRef.current = false` before calling `recognition.stop()` so auto-restart doesn't fire
+- Receives an audio file via FormData
+- Converts it to base64
+- Sends it to Gemini Flash via the Lovable AI gateway with a prompt like "Transcribe this audio exactly"
+- Returns the transcription text
+- Uses the existing `LOVABLE_API_KEY` (no new API keys needed)
+
+### 2. Updated Component: `src/components/VoiceRecorder.tsx`
+
+- Keep the existing `SpeechRecognition` attempt (it works on desktop, might work on some mobile browsers)
+- Track whether any transcript was received via a ref (`hasTranscriptRef`)
+- On stop: if `hasTranscriptRef` is false and an audio blob exists, call the new `transcribe-audio` backend function
+- Pass the returned text to `onTranscript`
+- Show a brief loading state while server transcription is in progress
+
+### 3. Updated Page: `src/pages/Index.tsx`
+
+- Minor update to handle the async nature of the fallback transcription (the analyze button should wait if transcription is still loading)
 
 ## Technical Details
 
-```text
-Current flow (broken on mobile):
-  Click mic -> MediaRecorder starts -> SpeechRecognition SKIPPED on mobile -> no text
+**Backend function pattern:**
+- Accept multipart FormData with the audio file
+- Read it as ArrayBuffer, convert to base64
+- Send to Gemini with audio content type in the message
+- Parse and return the transcription
 
-Fixed flow:
-  Click mic -> MediaRecorder starts -> SpeechRecognition starts (all platforms)
-    -> onresult: append transcript to journal
-    -> onend: auto-restart if still listening
-    -> onerror: silently ignored
-    -> stop button: set isListeningRef=false, stop recognition
-```
+**Client-side changes:**
+- Add `hasTranscriptRef` to track if browser speech recognition produced any output
+- Add `transcribing` state for the loading indicator during server-side transcription
+- On `mediaRecorder.onstop`, check if fallback is needed and call the edge function
+- The `onTranscript` callback fills the journal box the same way it does today
 
-Key code pattern for the `onend` handler:
-- `recognition.onend = () => { if (isListeningRef.current) { try { recognition.start(); } catch {} } }`
-- This ensures continuous transcription on mobile where the browser may stop recognition after a few seconds of silence
+**No new API keys required** -- uses the existing Lovable AI integration with Gemini Flash, which supports audio input.
 
-No database changes, no edge function changes, no other files affected.
+**No database changes needed.**
+
