@@ -1,11 +1,13 @@
 import { useState, useRef, useCallback } from 'react';
-import { Mic, MicOff } from 'lucide-react';
+import { Mic, MicOff, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface VoiceRecorderProps {
   onTranscript: (text: string) => void;
   onRecordingComplete: (blob: Blob) => void;
+  onTranscribingChange?: (transcribing: boolean) => void;
   disabled?: boolean;
 }
 
@@ -22,22 +24,76 @@ function getSupportedMimeType(): string {
   return '';
 }
 
-const VoiceRecorder = ({ onTranscript, onRecordingComplete, disabled }: VoiceRecorderProps) => {
+const VoiceRecorder = ({ onTranscript, onRecordingComplete, onTranscribingChange, disabled }: VoiceRecorderProps) => {
   const [recording, setRecording] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
   const recognitionRef = useRef<any>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const isListeningRef = useRef(false);
+  const hasTranscriptRef = useRef(false);
+  const mimeTypeRef = useRef('');
+
+  const setTranscribingState = (val: boolean) => {
+    setTranscribing(val);
+    onTranscribingChange?.(val);
+  };
+
+  const transcribeViaServer = useCallback(async (blob: Blob) => {
+    setTranscribingState(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast({ title: 'Not logged in', description: 'Please log in to use voice transcription.', variant: 'destructive' });
+        return;
+      }
+
+      const formData = new FormData();
+      const ext = blob.type.includes('mp4') ? 'mp4' : blob.type.includes('wav') ? 'wav' : 'webm';
+      formData.append('audio', blob, `recording.${ext}`);
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/transcribe-audio`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: formData,
+        }
+      );
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        console.error('Transcription error:', err);
+        toast({ title: 'Transcription failed', description: err.error || 'Could not transcribe audio. Try typing instead.', variant: 'destructive' });
+        return;
+      }
+
+      const { transcript } = await response.json();
+      if (transcript) {
+        onTranscript(transcript);
+      } else {
+        toast({ title: 'No speech detected', description: 'Could not detect any speech in the recording. Try speaking louder or closer to the mic.', variant: 'destructive' });
+      }
+    } catch (err) {
+      console.error('Server transcription error:', err);
+      toast({ title: 'Transcription error', description: 'Something went wrong. Please try again.', variant: 'destructive' });
+    } finally {
+      setTranscribingState(false);
+    }
+  }, [onTranscript, onTranscribingChange]);
 
   const startRecording = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-      // Pick a supported MIME type
       const mimeType = getSupportedMimeType();
+      mimeTypeRef.current = mimeType;
       const options: MediaRecorderOptions = mimeType ? { mimeType } : {};
       const mediaRecorder = new MediaRecorder(stream, options);
       chunksRef.current = [];
+      hasTranscriptRef.current = false;
 
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) chunksRef.current.push(e.data);
@@ -47,12 +103,17 @@ const VoiceRecorder = ({ onTranscript, onRecordingComplete, disabled }: VoiceRec
         const blob = new Blob(chunksRef.current, { type: mimeType || 'audio/webm' });
         onRecordingComplete(blob);
         stream.getTracks().forEach(t => t.stop());
+
+        // If browser speech recognition didn't capture anything, use server fallback
+        if (!hasTranscriptRef.current && blob.size > 0) {
+          transcribeViaServer(blob);
+        }
       };
 
       mediaRecorder.start();
       mediaRecorderRef.current = mediaRecorder;
 
-      // Start speech recognition on all platforms with silent error handling
+      // Try browser speech recognition (best effort)
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       if (SpeechRecognition) {
         try {
@@ -69,14 +130,13 @@ const VoiceRecorder = ({ onTranscript, onRecordingComplete, disabled }: VoiceRec
               }
             }
             if (finalTranscript.trim()) {
+              hasTranscriptRef.current = true;
               onTranscript(finalTranscript.trim());
             }
           };
 
-          // Silently catch all errors — no popups, no toasts
           recognition.onerror = () => { /* silent */ };
 
-          // Auto-restart when recognition ends if still recording (critical for mobile)
           recognition.onend = () => {
             if (isListeningRef.current) {
               try { recognition.start(); } catch { /* silent */ }
@@ -87,7 +147,7 @@ const VoiceRecorder = ({ onTranscript, onRecordingComplete, disabled }: VoiceRec
           recognition.start();
           recognitionRef.current = recognition;
         } catch {
-          // Speech recognition unavailable, audio recording still works
+          // Speech recognition unavailable, server fallback will handle it
         }
       }
 
@@ -104,7 +164,7 @@ const VoiceRecorder = ({ onTranscript, onRecordingComplete, disabled }: VoiceRec
         toast({ title: 'Microphone error', description: 'Could not access microphone. Please check your device settings.', variant: 'destructive' });
       }
     }
-  }, [onTranscript, onRecordingComplete]);
+  }, [onTranscript, onRecordingComplete, transcribeViaServer]);
 
   const stopRecording = useCallback(() => {
     isListeningRef.current = false;
@@ -123,14 +183,20 @@ const VoiceRecorder = ({ onTranscript, onRecordingComplete, disabled }: VoiceRec
   return (
     <Button
       type="button"
-      variant={recording ? 'destructive' : 'outline'}
+      variant={recording ? 'destructive' : transcribing ? 'secondary' : 'outline'}
       size="icon"
       onClick={toggle}
-      disabled={disabled}
+      disabled={disabled || transcribing}
       className={`rounded-full min-h-[44px] min-w-[44px] ${recording ? 'animate-pulse' : ''}`}
-      title={recording ? 'Stop recording' : 'Start voice input'}
+      title={transcribing ? 'Transcribing...' : recording ? 'Stop recording' : 'Start voice input'}
     >
-      {recording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+      {transcribing ? (
+        <Loader2 className="h-4 w-4 animate-spin" />
+      ) : recording ? (
+        <MicOff className="h-4 w-4" />
+      ) : (
+        <Mic className="h-4 w-4" />
+      )}
     </Button>
   );
 };
