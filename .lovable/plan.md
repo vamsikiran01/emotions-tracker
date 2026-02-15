@@ -1,60 +1,31 @@
 
 
-# Fix Mobile Speech-to-Text: Server-Side Transcription Fallback
+# Remove Browser Speech Recognition Popup on Mobile
 
 ## Problem
 
-The browser's native `SpeechRecognition` API is fundamentally unreliable on mobile browsers (especially in PWA/webview contexts). Despite multiple attempts to make it work with silent error handling and auto-restart, it still fails to produce transcription text on many mobile devices. This is a known limitation of the Web Speech API on mobile -- it is not a code bug we can fix.
+The browser's native `SpeechRecognition` API triggers a system-level popup on mobile ("Speech Recognition and Synthesis from Google cannot record now as C..."). This popup cannot be suppressed from code because it comes from the Android system, not our app. Since the server-side transcription fallback is already working perfectly on mobile, we should skip `SpeechRecognition` entirely on mobile devices.
 
-## Solution: Server-Side Audio Transcription
+## Solution
 
-Instead of relying solely on the browser's `SpeechRecognition` API, we add a **server-side fallback**. When the user stops recording, if no transcript was captured by the browser API, we send the recorded audio to a backend function that uses Gemini (via Lovable AI) to transcribe it. This approach works on every device because it only depends on `MediaRecorder`, which already works on mobile.
-
-```text
-Flow:
-  User clicks mic -> MediaRecorder starts + SpeechRecognition tries (best effort)
-  User clicks stop ->
-    IF browser captured transcript -> use it (already in journal box)
-    IF no transcript -> send audio blob to backend -> get text back -> put in journal box
-```
+Add a simple mobile detection check before attempting `SpeechRecognition`. On mobile devices, skip it entirely and let the server-side Gemini transcription handle everything. On desktop, keep the browser API as it works well there.
 
 ## What Changes
 
-### 1. New Backend Function: `supabase/functions/transcribe-audio/index.ts`
+**File: `src/components/VoiceRecorder.tsx`**
 
-- Receives an audio file via FormData
-- Converts it to base64
-- Sends it to Gemini Flash via the Lovable AI gateway with a prompt like "Transcribe this audio exactly"
-- Returns the transcription text
-- Uses the existing `LOVABLE_API_KEY` (no new API keys needed)
+- Add a mobile detection helper (using `navigator.userAgent` to check for Android/iPhone/iPad)
+- Wrap the `SpeechRecognition` block (lines 117-150) in a condition: only attempt it if NOT on mobile
+- On mobile, the flow becomes: MediaRecorder captures audio, on stop the server fallback always runs (since `hasTranscriptRef` will remain false)
+- No other files change
 
-### 2. Updated Component: `src/components/VoiceRecorder.tsx`
+```text
+Desktop flow (unchanged):
+  Click mic -> MediaRecorder + SpeechRecognition -> text appears live
 
-- Keep the existing `SpeechRecognition` attempt (it works on desktop, might work on some mobile browsers)
-- Track whether any transcript was received via a ref (`hasTranscriptRef`)
-- On stop: if `hasTranscriptRef` is false and an audio blob exists, call the new `transcribe-audio` backend function
-- Pass the returned text to `onTranscript`
-- Show a brief loading state while server transcription is in progress
+Mobile flow (fixed):
+  Click mic -> MediaRecorder only (no SpeechRecognition, no popup)
+  Click stop -> server-side Gemini transcription -> text appears in journal box
+```
 
-### 3. Updated Page: `src/pages/Index.tsx`
-
-- Minor update to handle the async nature of the fallback transcription (the analyze button should wait if transcription is still loading)
-
-## Technical Details
-
-**Backend function pattern:**
-- Accept multipart FormData with the audio file
-- Read it as ArrayBuffer, convert to base64
-- Send to Gemini with audio content type in the message
-- Parse and return the transcription
-
-**Client-side changes:**
-- Add `hasTranscriptRef` to track if browser speech recognition produced any output
-- Add `transcribing` state for the loading indicator during server-side transcription
-- On `mediaRecorder.onstop`, check if fallback is needed and call the edge function
-- The `onTranscript` callback fills the journal box the same way it does today
-
-**No new API keys required** -- uses the existing Lovable AI integration with Gemini Flash, which supports audio input.
-
-**No database changes needed.**
-
+No database changes, no edge function changes.
