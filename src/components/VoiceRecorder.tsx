@@ -51,35 +51,36 @@ const VoiceRecorder = ({ onTranscript, onRecordingComplete, disabled }: VoiceRec
       mediaRecorder.start();
       mediaRecorderRef.current = mediaRecorder;
 
-      // Start speech recognition (optional — not available on all mobile browsers)
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      if (SpeechRecognition) {
-        try {
-          const recognition = new SpeechRecognition();
-          recognition.continuous = true;
-          recognition.interimResults = true;
-          recognition.lang = 'en-US';
+      // Start speech recognition only on desktop — mobile browsers show
+      // intrusive error popups when the API is unavailable or blocked.
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      if (!isMobile) {
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        if (SpeechRecognition) {
+          try {
+            const recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'en-US';
 
-          recognition.onresult = (event: SpeechRecognitionEvent) => {
-            let finalTranscript = '';
-            for (let i = event.resultIndex; i < event.results.length; i++) {
-              if (event.results[i].isFinal) {
-                finalTranscript += event.results[i][0].transcript + ' ';
+            recognition.onresult = (event: SpeechRecognitionEvent) => {
+              let finalTranscript = '';
+              for (let i = event.resultIndex; i < event.results.length; i++) {
+                if (event.results[i].isFinal) {
+                  finalTranscript += event.results[i][0].transcript + ' ';
+                }
               }
-            }
-            if (finalTranscript.trim()) {
-              onTranscript(finalTranscript.trim());
-            }
-          };
+              if (finalTranscript.trim()) {
+                onTranscript(finalTranscript.trim());
+              }
+            };
 
-          recognition.onerror = (event: any) => {
-            console.error('Speech recognition error:', event.error);
-          };
-
-          recognition.start();
-          recognitionRef.current = recognition;
-        } catch {
-          // Speech recognition unavailable, audio recording still works
+            recognition.onerror = () => { /* silent */ };
+            recognition.start();
+            recognitionRef.current = recognition;
+          } catch {
+            // Speech recognition unavailable, audio recording still works
+          }
         }
       }
 
