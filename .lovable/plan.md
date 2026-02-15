@@ -1,61 +1,47 @@
 
 
-# Fix Authentication, Microphone, and Fresh Start
+# Fix Mobile Speech-to-Text Transcription
 
-## Problems Identified
+## Problem
 
-1. **Existing users can't sign up again** -- There are 3 existing accounts in the database blocking re-registration with those emails
-2. **Login fails for some accounts** -- Stale sessions (the auth logs show "Session not found" errors) are causing 401 errors
-3. **send-login-alert edge function returns 401** -- This fires on every sign-in and fails because the session token is sometimes stale, causing a visible error/blank screen
-4. **Microphone button doesn't work on mobile PWA** -- The `audio/webm` MIME type is not supported on iOS/Safari; also `navigator.permissions.query('microphone')` throws on mobile browsers, potentially blocking the flow
+The previous fix disabled `SpeechRecognition` entirely on mobile devices to prevent intrusive browser popups. This solved the popup issue but also removed the speech-to-text functionality -- so spoken words no longer appear in the journal box on mobile.
 
-## Plan
+## Solution
 
-### 1. Clear All Existing Auth Users (Database)
+Re-enable `SpeechRecognition` on all platforms (including mobile), but wrap it defensively so that:
 
-Delete all 3 existing user accounts from the database so the app starts fresh. New visitors will need to create an account first.
+1. All errors are silently caught -- no popups, no toasts, no console errors
+2. If the API is unavailable or blocked, audio recording still works (just without live transcription)
+3. Add an `onend` auto-restart handler so recognition doesn't stop after brief pauses in speech
+4. Use a ref flag (`isListeningRef`) to track whether the user intends to keep recording, so auto-restart only happens while actively recording
 
-- Delete all rows from `journal_entries` (they reference users being removed)
-- Delete all rows from `user_roles`
-- Delete all users from `auth.users`
+## What Changes
 
-### 2. Fix the send-login-alert 401 Error
+**File: `src/components/VoiceRecorder.tsx`**
 
-The edge function call in `useAuth.ts` fires during `onAuthStateChange` with `SIGNED_IN`, but the token can be stale or the function fails, causing a visible error. Fix:
-
-- Make the login alert call **non-blocking and silent** -- wrap it so errors are fully swallowed and never cause a blank screen
-- Add the required `apikey` header to the fetch call (the edge function needs it)
-
-### 3. Fix Login Page Error Handling
-
-Update `Login.tsx` to show clearer error messages:
-
-- For "User already registered" on signup: show "This email already has an account. Try signing in instead."
-- For "Invalid login credentials": show "Incorrect email or password."
-
-### 4. Fix Microphone on Mobile (iOS/Android PWA)
-
-Two issues prevent microphone from working on mobile:
-
-- **MIME type**: `audio/webm` is not supported on iOS Safari. Use `MediaRecorder.isTypeSupported()` to pick a supported format (`audio/webm` or `audio/mp4`)
-- **permissions.query**: Calling `navigator.permissions.query({ name: 'microphone' })` throws on some mobile browsers. The current catch block handles this, but the error can still block the flow. Simplify by removing the permissions pre-check entirely and just calling `getUserMedia` directly (the browser will prompt for permission)
-- **SpeechRecognition**: Not available on all mobile browsers. Make it optional -- if unavailable, still allow audio recording without live transcription
-
-### 5. Remove Any Remaining Branding Issues
-
-Verify the Header and all pages only show "Emo Track" with no external branding.
-
----
+- Remove the `isMobile` check that skips `SpeechRecognition` on mobile
+- Add an `isListeningRef` to track active recording state
+- Add `recognition.onend` handler that auto-restarts recognition if still recording (critical for mobile where recognition stops after silence)
+- Keep all error handlers silent (empty callbacks) to prevent any popups
+- Wrap `recognition.start()` in a try/catch to handle cases where the API exists but fails to start
+- On stop, set `isListeningRef.current = false` before calling `recognition.stop()` so auto-restart doesn't fire
 
 ## Technical Details
 
-### Files to modify:
-- **`src/hooks/useAuth.ts`** -- Fix login alert call (add apikey header, fully silence errors)
-- **`src/pages/Login.tsx`** -- Better error messages for duplicate signup and wrong credentials
-- **`src/components/VoiceRecorder.tsx`** -- Fix mobile MIME type detection, remove permissions.query pre-check, make SpeechRecognition optional
+```text
+Current flow (broken on mobile):
+  Click mic -> MediaRecorder starts -> SpeechRecognition SKIPPED on mobile -> no text
 
-### Database operations:
-- Delete from `journal_entries`, `user_roles`, and `auth.users` to start fresh
+Fixed flow:
+  Click mic -> MediaRecorder starts -> SpeechRecognition starts (all platforms)
+    -> onresult: append transcript to journal
+    -> onend: auto-restart if still listening
+    -> onerror: silently ignored
+    -> stop button: set isListeningRef=false, stop recognition
+```
 
-### No schema or migration changes needed.
+Key code pattern for the `onend` handler:
+- `recognition.onend = () => { if (isListeningRef.current) { try { recognition.start(); } catch {} } }`
+- This ensures continuous transcription on mobile where the browser may stop recognition after a few seconds of silence
 
+No database changes, no edge function changes, no other files affected.
