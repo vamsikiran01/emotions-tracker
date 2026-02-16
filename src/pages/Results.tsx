@@ -10,6 +10,7 @@ import { updateEntry, deleteEntry } from '@/lib/storage';
 import type { JournalEntry } from '@/lib/storage';
 import { isEnglishWord } from '@/lib/englishWords';
 import { toast } from '@/hooks/use-toast';
+import NLPAnalysisCard from '@/components/NLPAnalysisCard';
 
 const intensityColor: Record<string, string> = {
   Low: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 shadow-sm',
@@ -242,6 +243,11 @@ const Results = () => {
             </ul>
           </CardContent>
         </Card>
+
+        {/* NLP Analysis */}
+        <div className="mt-4 sm:mt-6">
+          <NLPAnalysisCard text={entry.text} />
+        </div>
 
         {/* Share hint */}
         <div className="mt-6 text-center animate-fade-slide-up stagger-6">
