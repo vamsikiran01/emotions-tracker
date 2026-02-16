@@ -303,8 +303,25 @@ export function analyzeEmotion(text: string): EmotionResult {
 
 export async function analyzeEmotionWithAI(text: string): Promise<EmotionResult> {
   try {
+    // Check cache: if the same text was already analyzed, return the stored result
+    const normalizedText = text.trim();
+    const { data: cached } = await supabase
+      .from('journal_entries')
+      .select('result')
+      .eq('text', normalizedText)
+      .limit(1)
+      .maybeSingle();
+
+    if (cached?.result) {
+      const cachedResult = cached.result as unknown as EmotionResult;
+      if (cachedResult.primaryEmotion) {
+        console.log('Returning cached emotion result for identical text');
+        return cachedResult;
+      }
+    }
+
     const { data, error } = await supabase.functions.invoke('analyze-emotion', {
-      body: { text },
+      body: { text: normalizedText },
     });
 
     if (error) throw error;
