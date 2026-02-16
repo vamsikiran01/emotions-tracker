@@ -42,6 +42,12 @@ const RELEVANT_BIGRAMS = new Set([
 ]);
 
 // ── Types ──────────────────────────────────────────────────
+export interface DatasetMatch {
+  status: string;
+  matchedWords: string[];
+  matchCount: number;
+}
+
 export interface NLPResult {
   totalTokens: number;
   uniqueTokens: number;
@@ -51,6 +57,26 @@ export interface NLPResult {
   negations: string[];
   pos: { nouns: number; verbs: number; adjectives: number; adverbs: number };
   lemmatizedTokens: string[];
+  datasetMatches: DatasetMatch[];
+}
+
+// ── Dataset keyword loader ────────────────────────────────
+function loadDatasetKeywords(): Record<string, string[]> | null {
+  try {
+    const raw = localStorage.getItem('mental-health-custom-keywords');
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    // Remove _meta key, keep only status → keywords entries
+    const result: Record<string, string[]> = {};
+    for (const [key, value] of Object.entries(parsed)) {
+      if (key !== '_meta' && Array.isArray(value)) {
+        result[key] = value;
+      }
+    }
+    return Object.keys(result).length > 0 ? result : null;
+  } catch {
+    return null;
+  }
 }
 
 // ── Main processor ─────────────────────────────────────────
@@ -110,6 +136,21 @@ export function processTextNLP(text: string): NLPResult {
   const adjectives = doc.adjectives().length;
   const adverbs = doc.adverbs().length;
 
+  // 6. Dataset keyword matching
+  let datasetMatches: DatasetMatch[] = [];
+  const datasetKeywords = loadDatasetKeywords();
+  if (datasetKeywords) {
+    const tokenSet = new Set(filtered);
+    const matches: DatasetMatch[] = [];
+    for (const [status, keywords] of Object.entries(datasetKeywords)) {
+      const matchedWords = keywords.filter(kw => tokenSet.has(kw));
+      if (matchedWords.length > 0) {
+        matches.push({ status, matchedWords, matchCount: matchedWords.length });
+      }
+    }
+    datasetMatches = matches.sort((a, b) => b.matchCount - a.matchCount);
+  }
+
   return {
     totalTokens,
     uniqueTokens,
@@ -119,5 +160,6 @@ export function processTextNLP(text: string): NLPResult {
     negations,
     pos: { nouns, verbs, adjectives, adverbs },
     lemmatizedTokens: lemmatized.length > 0 ? lemmatized : filtered,
+    datasetMatches,
   };
 }
