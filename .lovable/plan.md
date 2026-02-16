@@ -1,71 +1,62 @@
 
 
-# Integrate Dataset Keywords into NLP Analysis
+# Make Emotion Analysis Consistent for Same Text
 
-## Goal
+## Problem
 
-Connect the 51,000+ entry Kaggle dataset (already uploaded and processed via the Dataset Upload page) to the NLP analysis layer. The dataset keywords stored in localStorage will be read by the NLP processor and matched against journal text, showing which mental health categories the user's words align with.
+When you analyze the same journal entry twice, Gemini AI returns different emotions (e.g., "love" one day, "happy" the next). This happens because the AI model has randomness built in -- it picks slightly different answers each time.
 
-## What Changes (Only 2 files, additive only)
+## Solution (Two-Part Fix)
 
-### 1. `src/lib/nlpProcessor.ts` -- add dataset keyword matching
+### Part 1: Make the AI deterministic
 
-- Add a helper function `loadDatasetKeywords()` that reads from `localStorage` key `mental-health-custom-keywords` and returns the keyword map (e.g., `{ Depression: ["hopeless", "empty", ...], Anxiety: ["worried", "nervous", ...] }`)
-- Add a new field to `NLPResult`:
-  ```
-  datasetMatches: { status: string; matchedWords: string[]; matchCount: number }[]
-  ```
-- In `processTextNLP()`, after existing analysis, check the user's tokens against each status category's keywords from the dataset
-- Return the top matching categories with their matched words
-- If no dataset is loaded, `datasetMatches` will be an empty array (graceful fallback)
+In the backend function that calls Gemini, add `temperature: 0` to the request. This tells the AI model to always pick the most likely answer instead of introducing randomness. Same input will now produce the same output.
 
-### 2. `src/components/NLPAnalysisCard.tsx` -- display dataset matches
+**File changed:** `supabase/functions/analyze-emotion/index.ts`
+- Add `temperature: 0` to the API request body (one line addition)
 
-- Add a new section at the bottom of the card titled "Dataset Keyword Matches"
-- For each matched category, show the status name (e.g., "Depression", "Anxiety") as a badge with the count of matched words
-- Show the actual matched words as smaller badges underneath
-- If no dataset is uploaded, this section simply won't render (no error, no empty state)
+### Part 2: Cache results so re-analysis skips the AI call entirely
+
+Before calling the AI, check if the exact same text has already been analyzed and saved in the database. If yes, return that stored result directly instead of calling the AI again.
+
+**File changed:** `src/lib/emotionEngine.ts` (in the `analyzeEmotionWithAI` function)
+- Before calling the edge function, query the database for an existing entry with the exact same text
+- If found, return the previously stored emotion result
+- If not found, call the AI as usual
+
+This means:
+- First time analyzing a text: calls AI (with temperature 0 for consistency)
+- Any subsequent time with the same text: instantly returns the cached result from the database -- no AI call needed
 
 ## What Does NOT Change
 
-- `src/pages/DatasetUpload.tsx` -- untouched
-- `src/pages/Results.tsx` -- untouched
-- `src/lib/emotionEngine.ts` -- untouched
-- `src/lib/mentalHealthClassifier.ts` -- untouched
-- Edge functions -- untouched
-- VoiceRecorder -- untouched
+- NLP analysis -- untouched
+- Dataset keyword matching -- untouched
+- Results page UI -- untouched
 - Dashboard -- untouched
+- Voice recorder -- untouched
 - Index page -- untouched
-- Database -- untouched
+- Database schema -- untouched (uses existing journal_entries table)
 
-## How It Works
+## Technical Details
 
-```text
-User uploads CSV on Dataset page
-  -> Keywords extracted per mental health status
-  -> Saved to localStorage
-
-User writes journal entry
-  -> NLP processor runs (existing behavior unchanged)
-  -> NEW: processor reads dataset keywords from localStorage
-  -> NEW: matches user's tokens against each category
-  -> NEW: returns datasetMatches alongside existing NLP results
-
-NLP Analysis card renders
-  -> Existing sections (tokens, TF-IDF, bigrams, POS, negations) unchanged
-  -> NEW: "Dataset Keyword Matches" section appended at bottom
-  -> Shows which mental health categories the text aligns with
+**Edge function change (1 line):**
+```
+body: JSON.stringify({
+  model: "google/gemini-3-flash-preview",
+  temperature: 0,          // <-- NEW: makes output deterministic
+  messages: [...],
+  ...
+})
 ```
 
-## Example Output in the Card
-
-The NLP Analysis card will show an additional section:
-
-```text
-Dataset Keyword Matches (from 51,074 entries)
-  [Depression: 4 matches]  hopeless, empty, worthless, numb
-  [Anxiety: 3 matches]     worried, nervous, overthinking
-  [Stress: 2 matches]      overwhelmed, pressure
+**Client-side cache logic (in analyzeEmotionWithAI):**
+```
+1. Normalize text (trim + lowercase for matching)
+2. Query journal_entries table: SELECT result FROM journal_entries WHERE text = normalizedText LIMIT 1
+3. If found -> return that result (skip AI call)
+4. If not found -> call edge function as usual
 ```
 
-No database changes. No edge function changes. No config changes. Only 2 existing files modified with additive code.
+After this change, analyzing the same book review entry will always return "love" -- whether you do it today, tomorrow, or next week.
+
