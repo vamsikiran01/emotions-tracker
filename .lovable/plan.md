@@ -1,78 +1,71 @@
 
 
-# Add NLP Analysis Layer (Zero Changes to Existing Code)
+# Integrate Dataset Keywords into NLP Analysis
 
-## Approach
+## Goal
 
-Add NLP as a **display-only, additive layer** on the Results page. The existing emotion analysis, voice recorder, edge functions, and all other features remain completely untouched. NLP runs independently on the journal text and shows its findings in a new card below the existing results.
+Connect the 51,000+ entry Kaggle dataset (already uploaded and processed via the Dataset Upload page) to the NLP analysis layer. The dataset keywords stored in localStorage will be read by the NLP processor and matched against journal text, showing which mental health categories the user's words align with.
 
-## What Gets Added (Nothing Existing Changes)
+## What Changes (Only 2 files, additive only)
 
-### 1. New dependency: `compromise`
+### 1. `src/lib/nlpProcessor.ts` -- add dataset keyword matching
 
-A lightweight (~200KB) browser-based NLP library that provides tokenization, lemmatization, and POS tagging with zero configuration.
+- Add a helper function `loadDatasetKeywords()` that reads from `localStorage` key `mental-health-custom-keywords` and returns the keyword map (e.g., `{ Depression: ["hopeless", "empty", ...], Anxiety: ["worried", "nervous", ...] }`)
+- Add a new field to `NLPResult`:
+  ```
+  datasetMatches: { status: string; matchedWords: string[]; matchCount: number }[]
+  ```
+- In `processTextNLP()`, after existing analysis, check the user's tokens against each status category's keywords from the dataset
+- Return the top matching categories with their matched words
+- If no dataset is loaded, `datasetMatches` will be an empty array (graceful fallback)
 
-### 2. New file: `src/lib/nlpProcessor.ts`
+### 2. `src/components/NLPAnalysisCard.tsx` -- display dataset matches
 
-A standalone NLP module that takes journal text and returns:
-- **Tokenization** -- splitting text into cleaned word tokens
-- **Stopword removal** -- filtering out common words (the, is, and, etc.)
-- **Lemmatization** -- reducing words to base form (e.g., "crying" to "cry") via compromise
-- **Part-of-speech tagging** -- identifying nouns, verbs, adjectives
-- **Bigram extraction** -- detecting meaningful 2-word phrases (e.g., "panic attack", "self harm")
-- **TF-IDF keyword scoring** -- ranking words by importance
-- **Negation detection** -- spotting "not happy", "never good", etc.
-
-This file is completely independent -- it imports nothing from the existing codebase and the existing codebase imports nothing from it (except the Results page, which will use it for display).
-
-### 3. Updated file: `src/pages/Results.tsx` (additive only)
-
-- Import `processTextNLP` from the new module
-- Run it on `entry.text` via `useMemo` (no effect on existing analysis)
-- Add one new **"NLP Analysis" card** below the existing Suggestions card, showing:
-  - Top TF-IDF keywords as badges
-  - Detected bigrams/phrases
-  - POS breakdown (count of nouns, verbs, adjectives)
-  - Any detected negations
-  - Token count and vocabulary richness score
-
-**No existing cards, logic, styling, or behavior is modified.** The new card simply appends at the bottom.
+- Add a new section at the bottom of the card titled "Dataset Keyword Matches"
+- For each matched category, show the status name (e.g., "Depression", "Anxiety") as a badge with the count of matched words
+- Show the actual matched words as smaller badges underneath
+- If no dataset is uploaded, this section simply won't render (no error, no empty state)
 
 ## What Does NOT Change
 
-- Edge functions (analyze-emotion, transcribe-audio) -- untouched
-- VoiceRecorder component -- untouched
-- emotionEngine.ts -- untouched
-- mentalHealthClassifier.ts -- untouched
-- Index page -- untouched
+- `src/pages/DatasetUpload.tsx` -- untouched
+- `src/pages/Results.tsx` -- untouched
+- `src/lib/emotionEngine.ts` -- untouched
+- `src/lib/mentalHealthClassifier.ts` -- untouched
+- Edge functions -- untouched
+- VoiceRecorder -- untouched
 - Dashboard -- untouched
-- All existing UI cards on Results -- untouched
-- Database / storage -- untouched
+- Index page -- untouched
+- Database -- untouched
 
-## Technical Details
-
-The NLP card will display something like:
+## How It Works
 
 ```text
-+----------------------------------+
-|  NLP Text Analysis               |
-|                                  |
-|  Tokens: 45 | Unique: 32        |
-|  Vocabulary Richness: 71%       |
-|                                  |
-|  Top Keywords (TF-IDF):         |
-|  [anxious] [deadline] [sleep]   |
-|                                  |
-|  Key Phrases:                   |
-|  "panic attack" "racing thoughts"|
-|                                  |
-|  POS Breakdown:                 |
-|  Nouns: 12  Verbs: 8  Adj: 6   |
-|                                  |
-|  Negations Detected:            |
-|  "not sleeping" "can't relax"   |
-+----------------------------------+
+User uploads CSV on Dataset page
+  -> Keywords extracted per mental health status
+  -> Saved to localStorage
+
+User writes journal entry
+  -> NLP processor runs (existing behavior unchanged)
+  -> NEW: processor reads dataset keywords from localStorage
+  -> NEW: matches user's tokens against each category
+  -> NEW: returns datasetMatches alongside existing NLP results
+
+NLP Analysis card renders
+  -> Existing sections (tokens, TF-IDF, bigrams, POS, negations) unchanged
+  -> NEW: "Dataset Keyword Matches" section appended at bottom
+  -> Shows which mental health categories the text aligns with
 ```
 
-No database changes. No edge function changes. No config changes.
+## Example Output in the Card
 
+The NLP Analysis card will show an additional section:
+
+```text
+Dataset Keyword Matches (from 51,074 entries)
+  [Depression: 4 matches]  hopeless, empty, worthless, numb
+  [Anxiety: 3 matches]     worried, nervous, overthinking
+  [Stress: 2 matches]      overwhelmed, pressure
+```
+
+No database changes. No edge function changes. No config changes. Only 2 existing files modified with additive code.
