@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Brain } from 'lucide-react';
+import { Brain, Database } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { processTextNLP } from '@/lib/nlpProcessor';
@@ -97,6 +97,31 @@ const NLPAnalysisCard = ({ text }: NLPAnalysisCardProps) => {
                 <Badge key={i} variant="destructive" className="text-xs font-normal">
                   "{neg}"
                 </Badge>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Dataset Keyword Matches */}
+        {nlpResult.datasetMatches.length > 0 && (
+          <div>
+            <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
+              <Database className="h-3 w-3" /> Dataset Keyword Matches
+            </p>
+            <div className="space-y-2">
+              {nlpResult.datasetMatches.map((match) => (
+                <div key={match.status}>
+                  <Badge variant="default" className="text-xs mb-1">
+                    {match.status}: {match.matchCount} match{match.matchCount !== 1 ? 'es' : ''}
+                  </Badge>
+                  <div className="flex flex-wrap gap-1 ml-1">
+                    {match.matchedWords.map((word) => (
+                      <Badge key={word} variant="outline" className="text-xs font-normal">
+                        {word}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           </div>
