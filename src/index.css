@@ -36,14 +36,14 @@
 
     --radius: 0.75rem;
 
-    --emotion-happy: 45 90% 55%;
-    --emotion-sad: 220 60% 55%;
-    --emotion-angry: 0 75% 55%;
-    --emotion-fear: 280 50% 50%;
-    --emotion-surprise: 35 90% 55%;
-    --emotion-love: 340 75% 60%;
-    --emotion-neutral: 220 15% 55%;
-    --emotion-anxious: 25 70% 55%;
+    --emotion-happy: 120 50% 55%;
+    --emotion-sad: 30 85% 55%;
+    --emotion-angry: 0 75% 50%;
+    --emotion-fear: 270 55% 55%;
+    --emotion-surprise: 210 70% 55%;
+    --emotion-love: 330 70% 65%;
+    --emotion-neutral: 0 0% 55%;
+    --emotion-anxious: 30 40% 40%;
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -84,14 +84,14 @@
     --input: 240 15% 20%;
     --ring: 258 60% 65%;
 
-    --emotion-happy: 45 85% 50%;
-    --emotion-sad: 220 55% 50%;
-    --emotion-angry: 0 70% 50%;
-    --emotion-fear: 280 45% 50%;
-    --emotion-surprise: 35 85% 50%;
-    --emotion-love: 340 70% 55%;
-    --emotion-neutral: 220 15% 50%;
-    --emotion-anxious: 25 65% 50%;
+    --emotion-happy: 120 45% 50%;
+    --emotion-sad: 30 80% 50%;
+    --emotion-angry: 0 70% 45%;
+    --emotion-fear: 270 50% 50%;
+    --emotion-surprise: 210 65% 50%;
+    --emotion-love: 330 65% 60%;
+    --emotion-neutral: 0 0% 50%;
+    --emotion-anxious: 30 35% 35%;
 
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
