@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Flame, Shield, TrendingUp, BarChart3, CalendarDays, Trash2, Database, Pencil, Save, X, Volume2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Flame, Shield, TrendingUp, BarChart3, CalendarDays, Trash2, Database, Pencil, Save, X, Volume2, Eye } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,6 +11,7 @@ import { EMOTION_META, analyzeEmotion } from '@/lib/emotionEngine';
 import { STATUS_META, type MentalHealthStatus } from '@/lib/mentalHealthClassifier';
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -247,6 +249,9 @@ const Dashboard = () => {
                         </div>
                         {!isEditing && (
                           <div className="flex gap-1 shrink-0">
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => navigate('/results', { state: { entry } })} title="View full results">
+                              <Eye className="h-3.5 w-3.5" />
+                            </Button>
                             <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => handleEditStart(entry)}>
                               <Pencil className="h-3.5 w-3.5" />
                             </Button>
