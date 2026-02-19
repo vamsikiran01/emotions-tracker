@@ -1,40 +1,80 @@
 
-# Add "View Full Results" Button to Dashboard Past Entries
 
-## What This Does
+# Fix Dashboard Re-analyze + Update Emotion Colors
 
-Each past entry in the Dashboard will get a new "View" button (an eye icon) alongside the existing Edit and Delete buttons. Clicking it navigates to the Results page showing the complete analysis for that entry -- the same view you see after submitting a new journal entry: primary emotion card, confidence bar, AI insight, personalized suggestions, and the NLP Analysis card.
+## Problem 1: Dashboard Shows Old Results After Re-analyze
 
-## How It Works
+The Dashboard's inline edit (line 62 of Dashboard.tsx) calls `analyzeEmotion()` -- the **local keyword-based** analyzer -- instead of `analyzeEmotionWithAI()` which is the **AI-powered** one used on the Results page. This means:
+- The re-analyzed result differs from what the AI would produce
+- The dashboard shows incorrect/stale emotion data after editing
 
-The Results page already accepts a journal entry via React Router's `location.state`. So the Dashboard just needs to navigate to `/results` and pass the entry data -- no new pages or components needed.
+## Problem 2: Emotion Colors Don't Match Requested Colors
+
+Colors need to be updated to:
+1. Happy -- light green
+2. Sad -- orange
+3. Angry -- red
+4. Fear -- purple
+5. Neutral -- gray
+6. Love -- pink
+7. Anxious -- brown
+8. Surprise -- blue
+
+---
 
 ## What Changes
 
-**File: `src/pages/Dashboard.tsx`**
+### File 1: `src/pages/Dashboard.tsx`
+- Change import from `analyzeEmotion` to `analyzeEmotionWithAI`
+- Make `handleEditSave` async and call `analyzeEmotionWithAI(trimmed)` instead of `analyzeEmotion(trimmed)`
+- Add a loading state for the inline edit save button (spinner while AI processes)
 
-1. Import `useNavigate` from `react-router-dom` and `Eye` icon from `lucide-react`
-2. Add `const navigate = useNavigate()` inside the component
-3. Add a "View" button (Eye icon) next to the Edit and Delete buttons for each entry
-4. On click, navigate to `/results` passing the entry as state: `navigate('/results', { state: { entry } })`
+### File 2: `src/lib/emotionEngine.ts`
+- Update `EMOTION_META` color values:
+  - happy: light green
+  - sad: orange
+  - angry: red
+  - fear: purple
+  - neutral: gray
+  - love: pink
+  - anxious: brown
+  - surprise: blue
+
+### File 3: `src/lib/storage.ts`
+- Update the `colorMap` inside `getEmotionDistribution()` to match the same new colors (used for the bar chart)
+
+### File 4: `src/index.css`
+- Update the CSS custom properties (`--emotion-happy`, `--emotion-sad`, etc.) for both light and dark themes to match the new color scheme
+
+---
 
 ## What Does NOT Change
 
-- Results page -- already handles displaying a full entry, untouched
-- NLP Analysis card -- untouched
-- Edit/Delete functionality on Dashboard -- stays the same
+- Results page logic -- already uses `analyzeEmotionWithAI`, untouched
 - Backend, database, edge functions -- no changes
+- NLP Analysis card -- untouched
 
 ## Technical Details
 
-**New button added to each entry's action buttons (alongside Edit and Delete):**
+**Dashboard fix -- switch to AI analysis:**
+```typescript
+// Before (line 62):
+const newResult = analyzeEmotion(trimmed);
 
-```tsx
-<Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary"
-  onClick={() => navigate('/results', { state: { entry } })}
-  title="View full results">
-  <Eye className="h-3.5 w-3.5" />
-</Button>
+// After:
+const newResult = await analyzeEmotionWithAI(trimmed);
 ```
 
-This reuses the existing Results page exactly as-is, including the "Write Another Entry" back button, edit/delete options, AI Insight, Suggestions, and NLP Analysis card.
+**New color mapping (applied consistently across all files):**
+
+| Emotion  | HSL Value              | Visual  |
+|----------|------------------------|---------|
+| happy    | hsl(120, 50%, 55%)     | Light green |
+| sad      | hsl(30, 85%, 55%)      | Orange  |
+| angry    | hsl(0, 75%, 50%)       | Red     |
+| fear     | hsl(270, 55%, 55%)     | Purple  |
+| neutral  | hsl(0, 0%, 55%)        | Gray    |
+| love     | hsl(330, 70%, 65%)     | Pink    |
+| anxious  | hsl(30, 40%, 40%)      | Brown   |
+| surprise | hsl(210, 70%, 55%)     | Blue    |
+
