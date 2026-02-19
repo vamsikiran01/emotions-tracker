@@ -1,77 +1,40 @@
 
-# Add Loading State to "Save & Re-analyze" Button
+# Add "View Full Results" Button to Dashboard Past Entries
 
-## Problem
+## What This Does
 
-The "Save & Re-analyze" button in the edit section on the Results page has no loading indicator. When clicked, it freezes with no feedback while waiting for the AI response -- unlike the "Analyze My Emotions" button on the journal entry page, which shows a spinner and "Analyzing..." text.
+Each past entry in the Dashboard will get a new "View" button (an eye icon) alongside the existing Edit and Delete buttons. Clicking it navigates to the Results page showing the complete analysis for that entry -- the same view you see after submitting a new journal entry: primary emotion card, confidence bar, AI insight, personalized suggestions, and the NLP Analysis card.
 
-## Solution
+## How It Works
 
-Add a `reanalyzing` state to the Results page and mirror the same loading pattern used on the Index page: show a spinning loader icon with "Analyzing..." text, and disable the textarea and buttons while processing.
+The Results page already accepts a journal entry via React Router's `location.state`. So the Dashboard just needs to navigate to `/results` and pass the entry data -- no new pages or components needed.
 
 ## What Changes
 
-**File: `src/pages/Results.tsx`**
+**File: `src/pages/Dashboard.tsx`**
 
-1. Import `Loader2` from `lucide-react` (already imports other icons from there)
-2. Add a `reanalyzing` state: `const [reanalyzing, setReanalyzing] = useState(false);`
-3. Wrap the `handleSaveEdit` logic with `setReanalyzing(true)` / `setReanalyzing(false)` (in a try/finally block)
-4. Update the "Save & Re-analyze" button to show spinner + "Analyzing..." when `reanalyzing` is true
-5. Disable the textarea and Cancel button while re-analyzing
-
-## What It Looks Like
-
-- **Before click**: Button shows `Save & Re-analyze` with a save icon
-- **During analysis**: Button shows spinning loader + `Analyzing...`, textarea is disabled, Cancel button is disabled
-- **After completion**: Results update as usual
+1. Import `useNavigate` from `react-router-dom` and `Eye` icon from `lucide-react`
+2. Add `const navigate = useNavigate()` inside the component
+3. Add a "View" button (Eye icon) next to the Edit and Delete buttons for each entry
+4. On click, navigate to `/results` passing the entry as state: `navigate('/results', { state: { entry } })`
 
 ## What Does NOT Change
 
-- No backend changes
-- No edge function changes
-- No database changes
-- Analysis logic stays the same
-- Index page untouched
+- Results page -- already handles displaying a full entry, untouched
+- NLP Analysis card -- untouched
+- Edit/Delete functionality on Dashboard -- stays the same
+- Backend, database, edge functions -- no changes
 
 ## Technical Details
 
-**State addition:**
-```typescript
-const [reanalyzing, setReanalyzing] = useState(false);
-```
+**New button added to each entry's action buttons (alongside Edit and Delete):**
 
-**In handleSaveEdit, wrap with try/finally:**
-```typescript
-const handleSaveEdit = async () => {
-  // ... validation stays the same ...
-  setReanalyzing(true);
-  try {
-    // ... existing analysis logic ...
-  } finally {
-    setReanalyzing(false);
-  }
-};
-```
-
-**Button update:**
 ```tsx
-<Button size="sm" onClick={handleSaveEdit} disabled={!editText.trim() || reanalyzing} className="gap-1">
-  {reanalyzing ? (
-    <>
-      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-      Analyzing...
-    </>
-  ) : (
-    <>
-      <Save className="h-3.5 w-3.5" />
-      Save & Re-analyze
-    </>
-  )}
+<Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary"
+  onClick={() => navigate('/results', { state: { entry } })}
+  title="View full results">
+  <Eye className="h-3.5 w-3.5" />
 </Button>
 ```
 
-**Textarea and Cancel button disabled during analysis:**
-```tsx
-<Textarea disabled={reanalyzing} ... />
-<Button variant="ghost" size="sm" onClick={() => setEditing(false)} disabled={reanalyzing} ...>
-```
+This reuses the existing Results page exactly as-is, including the "Write Another Entry" back button, edit/delete options, AI Insight, Suggestions, and NLP Analysis card.
