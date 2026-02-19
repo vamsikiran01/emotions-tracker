@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft, AlertTriangle, Lightbulb, Brain, Share2, Pencil, Trash2, Save, X } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, Lightbulb, Brain, Share2, Pencil, Trash2, Save, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -39,7 +39,7 @@ const Results = () => {
   );
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState('');
-
+  const [reanalyzing, setReanalyzing] = useState(false);
   useEffect(() => {
     if (!entry) {
       navigate('/');
@@ -82,6 +82,9 @@ const Results = () => {
       return;
     }
 
+    setReanalyzing(true);
+    try {
+
     const words = trimmed.split(/\s+/).filter(Boolean);
     let newResult: EmotionResult;
 
@@ -113,6 +116,9 @@ const Results = () => {
     await updateEntry(updated);
     setEntry(updated);
     setEditing(false);
+    } finally {
+      setReanalyzing(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -147,14 +153,25 @@ const Results = () => {
               <Textarea
                 value={editText}
                 onChange={e => setEditText(e.target.value)}
+                disabled={reanalyzing}
                 className="min-h-[120px] text-sm resize-none border-border bg-muted/30 focus-visible:ring-primary/30"
               />
               <div className="flex gap-2 justify-end">
-                <Button variant="ghost" size="sm" onClick={() => setEditing(false)} className="gap-1">
+                <Button variant="ghost" size="sm" onClick={() => setEditing(false)} disabled={reanalyzing} className="gap-1">
                   <X className="h-3.5 w-3.5" /> Cancel
                 </Button>
-                <Button size="sm" onClick={handleSaveEdit} disabled={!editText.trim()} className="gap-1">
-                  <Save className="h-3.5 w-3.5" /> Save & Re-analyze
+                <Button size="sm" onClick={handleSaveEdit} disabled={!editText.trim() || reanalyzing} className="gap-1">
+                  {reanalyzing ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Analyzing...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-3.5 w-3.5" />
+                      Save & Re-analyze
+                    </>
+                  )}
                 </Button>
               </div>
             </CardContent>
