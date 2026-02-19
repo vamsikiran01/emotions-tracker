@@ -16,12 +16,12 @@ export interface MentalHealthResult {
 
 export const STATUS_META: Record<MentalHealthStatus, { emoji: string; color: string; label: string; description: string }> = {
   Normal: { emoji: '🟢', color: 'hsl(142, 55%, 49%)', label: 'Normal', description: 'No significant mental health concerns detected' },
-  Depression: { emoji: '🔵', color: 'hsl(220, 60%, 55%)', label: 'Depression', description: 'Patterns consistent with depressive symptoms' },
-  Suicidal: { emoji: '🔴', color: 'hsl(0, 72%, 50%)', label: 'Suicidal Ideation', description: 'Language suggesting self-harm or suicidal thoughts detected' },
-  Anxiety: { emoji: '🟡', color: 'hsl(45, 85%, 50%)', label: 'Anxiety', description: 'Patterns consistent with anxiety symptoms' },
-  Stress: { emoji: '🟠', color: 'hsl(25, 70%, 55%)', label: 'Stress', description: 'Signs of elevated stress or burnout' },
-  Bipolar: { emoji: '🟣', color: 'hsl(280, 50%, 55%)', label: 'Bipolar', description: 'Mixed emotional patterns with rapid shifts' },
-  'Personality disorder': { emoji: '🔶', color: 'hsl(35, 80%, 50%)', label: 'Personality Disorder', description: 'Patterns suggesting personality-related concerns' },
+  Depression: { emoji: '🔵', color: 'hsl(50, 80%, 50%)', label: 'Depression', description: 'Patterns consistent with depressive symptoms' },
+  Suicidal: { emoji: '🔴', color: 'hsl(0, 60%, 30%)', label: 'Suicidal Ideation', description: 'Language suggesting self-harm or suicidal thoughts detected' },
+  Anxiety: { emoji: '🟡', color: 'hsl(30, 50%, 40%)', label: 'Anxiety', description: 'Patterns consistent with anxiety symptoms' },
+  Stress: { emoji: '🟠', color: 'hsl(140, 50%, 30%)', label: 'Stress', description: 'Signs of elevated stress or burnout' },
+  Bipolar: { emoji: '🟣', color: 'hsl(220, 70%, 30%)', label: 'Bipolar', description: 'Mixed emotional patterns with rapid shifts' },
+  'Personality disorder': { emoji: '🔶', color: 'hsl(40, 40%, 70%)', label: 'Personality Disorder', description: 'Patterns suggesting personality-related concerns' },
 };
 
 const STATUS_KEYWORDS: Record<MentalHealthStatus, { words: string[]; weight: number }[]> = {
