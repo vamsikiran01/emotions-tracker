@@ -25,7 +25,8 @@ Rules:
 Critical safety rules:
 - Text mentioning wanting to die, self-harm, ending life, feeling worthless with no hope MUST trigger safetyAlert=true and primaryEmotion=sad
 - NEVER classify distressing/crisis text as "happy"
-- When in doubt about safety, err on the side of triggering the alert`;
+- When in doubt about safety, err on the side of triggering the alert
+- You may receive dataset keyword matches as supplementary context appended to the user's text. These are pattern matches from a 51,000+ entry mental health dataset and should be treated as a SOFT REFERENCE signal only. ALWAYS prioritize the full meaning, tone, and emotional context of the journal entry over dataset keyword matches. The dataset is a supporting partner, not the decision-maker. For example, if a positive book review mentions words like "alone" or "trauma", the dataset may flag Depression — but YOU must recognize the overall positive/loving tone and classify accordingly.`;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -57,7 +58,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { text } = await req.json();
+    const { text, datasetContext } = await req.json();
     if (!text || typeof text !== "string" || text.trim().length === 0) {
       return new Response(JSON.stringify({ error: "Text is required" }), {
         status: 400,
@@ -84,7 +85,9 @@ Deno.serve(async (req) => {
         temperature: 0,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: text },
+          { role: "user", content: datasetContext
+            ? `${text}\n\n---\nDataset Reference (supplementary context — use as soft reference only, always prioritize the full emotional meaning and tone of the journal text above):\n${datasetContext}`
+            : text },
         ],
         tools: [
           {

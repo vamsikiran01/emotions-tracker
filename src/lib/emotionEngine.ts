@@ -3,6 +3,7 @@ export type SentimentType = 'Positive' | 'Negative' | 'Neutral' | 'Mixed';
 export type IntensityLevel = 'Low' | 'Medium' | 'High';
 
 import { classifyMentalHealth, type MentalHealthResult } from './mentalHealthClassifier';
+import { processTextNLP } from './nlpProcessor';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface EmotionResult {
@@ -320,8 +321,16 @@ export async function analyzeEmotionWithAI(text: string): Promise<EmotionResult>
       }
     }
 
+    // Run local NLP dataset matching to provide context for Gemini
+    const nlpResult = processTextNLP(normalizedText);
+    const datasetContext = nlpResult.datasetMatches.length > 0
+      ? nlpResult.datasetMatches.slice(0, 5).map(m =>
+          `${m.status}: matched words [${m.matchedWords.slice(0, 5).join(', ')}] (${m.matchCount} matches)`
+        ).join('\n')
+      : null;
+
     const { data, error } = await supabase.functions.invoke('analyze-emotion', {
-      body: { text: normalizedText },
+      body: { text: normalizedText, datasetContext },
     });
 
     if (error) throw error;
