@@ -11,10 +11,6 @@ interface VoiceRecorderProps {
   disabled?: boolean;
 }
 
-interface SpeechRecognitionEvent {
-  results: SpeechRecognitionResultList;
-  resultIndex: number;
-}
 
 function getSupportedMimeType(): string {
   const types = ['audio/webm', 'audio/mp4', 'audio/ogg', 'audio/wav', ''];
@@ -27,11 +23,8 @@ function getSupportedMimeType(): string {
 const VoiceRecorder = ({ onTranscript, onRecordingComplete, onTranscribingChange, disabled }: VoiceRecorderProps) => {
   const [recording, setRecording] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
-  const recognitionRef = useRef<any>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
-  const isListeningRef = useRef(false);
-  const hasTranscriptRef = useRef(false);
   const mimeTypeRef = useRef('');
 
   const setTranscribingState = (val: boolean) => {
@@ -93,7 +86,6 @@ const VoiceRecorder = ({ onTranscript, onRecordingComplete, onTranscribingChange
       const options: MediaRecorderOptions = mimeType ? { mimeType } : {};
       const mediaRecorder = new MediaRecorder(stream, options);
       chunksRef.current = [];
-      hasTranscriptRef.current = false;
 
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) chunksRef.current.push(e.data);
@@ -104,53 +96,14 @@ const VoiceRecorder = ({ onTranscript, onRecordingComplete, onTranscribingChange
         onRecordingComplete(blob);
         stream.getTracks().forEach(t => t.stop());
 
-        // If browser speech recognition didn't capture anything, use server fallback
-        if (!hasTranscriptRef.current && blob.size > 0) {
+        // Always use server-side transcription for accuracy
+        if (blob.size > 0) {
           transcribeViaServer(blob);
         }
       };
 
       mediaRecorder.start();
       mediaRecorderRef.current = mediaRecorder;
-
-      // Try browser speech recognition (best effort, desktop only)
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      if (!isMobile && SpeechRecognition) {
-        try {
-          const recognition = new SpeechRecognition();
-          recognition.continuous = true;
-          recognition.interimResults = true;
-          recognition.lang = 'en-US';
-
-          recognition.onresult = (event: SpeechRecognitionEvent) => {
-            let finalTranscript = '';
-            for (let i = event.resultIndex; i < event.results.length; i++) {
-              if (event.results[i].isFinal) {
-                finalTranscript += event.results[i][0].transcript + ' ';
-              }
-            }
-            if (finalTranscript.trim()) {
-              hasTranscriptRef.current = true;
-              onTranscript(finalTranscript.trim());
-            }
-          };
-
-          recognition.onerror = () => { /* silent */ };
-
-          recognition.onend = () => {
-            if (isListeningRef.current) {
-              try { recognition.start(); } catch { /* silent */ }
-            }
-          };
-
-          isListeningRef.current = true;
-          recognition.start();
-          recognitionRef.current = recognition;
-        } catch {
-          // Speech recognition unavailable, server fallback will handle it
-        }
-      }
 
       setRecording(true);
     } catch (err: any) {
@@ -168,9 +121,6 @@ const VoiceRecorder = ({ onTranscript, onRecordingComplete, onTranscribingChange
   }, [onTranscript, onRecordingComplete, transcribeViaServer]);
 
   const stopRecording = useCallback(() => {
-    isListeningRef.current = false;
-    try { recognitionRef.current?.stop(); } catch {}
-    recognitionRef.current = null;
     mediaRecorderRef.current?.stop();
     mediaRecorderRef.current = null;
     setRecording(false);
