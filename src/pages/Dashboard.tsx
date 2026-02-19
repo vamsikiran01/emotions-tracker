@@ -1,14 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Flame, Shield, TrendingUp, BarChart3, CalendarDays, Trash2, Database, Pencil, Save, X, Volume2, Eye } from 'lucide-react';
+import { Flame, Shield, TrendingUp, BarChart3, CalendarDays, Trash2, Database, Pencil, Save, X, Eye } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { getEntries, getWeeklyDominantEmotion, getEmotionDistribution, getStabilityScore, getStreak, clearEntries, updateEntry, deleteEntry, JournalEntry } from '@/lib/storage';
-import { EMOTION_META, analyzeEmotion } from '@/lib/emotionEngine';
+import { EMOTION_META, analyzeEmotionWithAI, EMOTION_WORDS_SET } from '@/lib/emotionEngine';
+import type { EmotionResult, EmotionType } from '@/lib/emotionEngine';
 import { STATUS_META, type MentalHealthStatus } from '@/lib/mentalHealthClassifier';
+import { isEnglishWord } from '@/lib/englishWords';
+import { toast } from '@/hooks/use-toast';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -16,6 +19,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   useEffect(() => {
     getEntries().then(data => {
@@ -59,11 +63,40 @@ const Dashboard = () => {
   const handleEditSave = async (entry: JournalEntry) => {
     const trimmed = editText.trim();
     if (!trimmed) return;
-    const newResult = analyzeEmotion(trimmed);
-    const updated = { ...entry, text: trimmed, result: newResult };
-    await updateEntry(updated);
-    setEntries(prev => prev.map(e => e.id === entry.id ? updated : e));
-    setEditingId(null);
+
+    const words = trimmed.split(/\s+/).filter(Boolean);
+    const englishWords = words.filter(isEnglishWord);
+    if (englishWords.length < Math.max(1, Math.ceil(words.length * 0.5))) {
+      toast({ title: "Invalid entry", description: "Please enter a valid journal entry with meaningful text.", variant: "destructive" });
+      return;
+    }
+
+    setIsAnalyzing(true);
+    try {
+      let newResult: EmotionResult;
+      if (words.length === 1) {
+        const word = words[0].toLowerCase().replace(/[^a-z]/g, '');
+        if (EMOTION_WORDS_SET.has(word)) {
+          newResult = await analyzeEmotionWithAI(trimmed);
+        } else {
+          newResult = {
+            primaryEmotion: 'neutral' as EmotionType, confidence: 80, sentiment: 'Neutral',
+            keywords: [], intensity: 'Low',
+            insight: "You shared a simple thought. Not every moment carries a strong emotion — and that's perfectly fine. 😊",
+            suggestions: ["📝 Try writing a bit more about how your day is going", "🚶 Take a moment to check in with yourself", "☕ Enjoy this calm moment"],
+            safetyAlert: false,
+          };
+        }
+      } else {
+        newResult = await analyzeEmotionWithAI(trimmed);
+      }
+      const updated = { ...entry, text: trimmed, result: newResult };
+      await updateEntry(updated);
+      setEntries(prev => prev.map(e => e.id === entry.id ? updated : e));
+      setEditingId(null);
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const handleDeleteEntry = async (id: string) => {
@@ -231,8 +264,12 @@ const Dashboard = () => {
                                 <Button variant="ghost" size="sm" onClick={() => setEditingId(null)} className="gap-1 h-7 text-xs">
                                   <X className="h-3 w-3" /> Cancel
                                 </Button>
-                                <Button size="sm" onClick={() => handleEditSave(entry)} disabled={!editText.trim()} className="gap-1 h-7 text-xs">
-                                  <Save className="h-3 w-3" /> Save
+                                <Button size="sm" onClick={() => handleEditSave(entry)} disabled={!editText.trim() || isAnalyzing} className="gap-1 h-7 text-xs">
+                                  {isAnalyzing ? (
+                                    <><span className="animate-spin h-3 w-3 border-2 border-primary-foreground border-t-transparent rounded-full" /> Analyzing...</>
+                                  ) : (
+                                    <><Save className="h-3 w-3" /> Save & Re-analyze</>
+                                  )}
                                 </Button>
                               </div>
                             </div>
