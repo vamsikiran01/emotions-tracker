@@ -137,7 +137,7 @@ export function getEmotionDistribution(entries: JournalEntry[]): { emotion: stri
     personality_disorder: 'hsl(40, 40%, 70%)',
   };
   return Object.entries(counts).map(([emotion, count]) => ({
-    emotion: emotion.charAt(0).toUpperCase() + emotion.slice(1),
+    emotion: emotion.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
     count,
     fill: colorMap[emotion] || 'hsl(220, 15%, 55%)',
   }));
