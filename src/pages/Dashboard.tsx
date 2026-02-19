@@ -182,10 +182,28 @@ const Dashboard = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-64">
+                  <div className="h-72">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={distribution}>
-                        <XAxis dataKey="emotion" tick={{ fontSize: 12 }} />
+                      <BarChart data={distribution} margin={{ bottom: 20 }}>
+                        <XAxis
+                          dataKey="emotion"
+                          interval={0}
+                          tick={({ x, y, payload }: any) => {
+                            const words = payload.value.split(' ');
+                            return (
+                              <g transform={`translate(${x},${y})`}>
+                                {words.length > 1 ? (
+                                  <>
+                                    <text x={0} y={8} textAnchor="middle" fontSize={10} fill="currentColor">{words[0]}</text>
+                                    <text x={0} y={20} textAnchor="middle" fontSize={10} fill="currentColor">{words[1]}</text>
+                                  </>
+                                ) : (
+                                  <text x={0} y={14} textAnchor="middle" fontSize={11} fill="currentColor">{payload.value}</text>
+                                )}
+                              </g>
+                            );
+                          }}
+                        />
                         <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
                         <Tooltip
                           contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))', background: 'hsl(var(--card))' }}
