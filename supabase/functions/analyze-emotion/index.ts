@@ -11,7 +11,7 @@ const SYSTEM_PROMPT = `You are an expert emotion analysis AI for a mental health
 You MUST call the "analyze_emotion" function with your analysis. Do NOT return plain text.
 
 Rules:
-- primaryEmotion: exactly one of: happy, sad, angry, fear, surprise, love, anxious. NEVER use "neutral" — always pick the closest emotional match even for mild or ambiguous text.
+- primaryEmotion: exactly one of: happy, sad, angry, fear, surprise, love, anxious, depression, suicidal, stress, bipolar, personality_disorder. NEVER use "neutral" — always pick the closest emotional match even for mild or ambiguous text.
 - confidence: integer 55-98 representing how confident you are
 - sentiment: exactly one of: Positive, Negative, Neutral, Mixed
 - intensity: exactly one of: Low, Medium, High
@@ -22,8 +22,17 @@ Rules:
 - mentalHealthClassification: exactly one of: Normal, Depression, Suicidal, Anxiety, Stress, Bipolar, Personality Disorder
 - mentalHealthConfidence: integer 50-95
 
+IMPORTANT — When to use clinical emotions vs. basic emotions:
+- Use "depression" when text shows PERSISTENT hopelessness, loss of meaning, chronic emptiness, withdrawal from life — beyond temporary sadness. Key signals: "nothing matters", "lost interest in everything", "going through the motions", "can't feel anything"
+- Use "suicidal" when text contains self-harm ideation, wanting to end life, feeling like a burden, or explicit mentions of suicide. This MUST ALWAYS trigger safetyAlert=true
+- Use "stress" when text focuses on overwhelm, burnout, pressure, workload, deadlines — distinct from general anxiety. Key signals: "too much work", "can't keep up", "burned out", "no time"
+- Use "bipolar" when text describes extreme mood swings, manic-depressive cycles, rapid emotional shifts between euphoria and despair. Key signals: "mood swings", "one moment up next moment down", "can't control my moods"
+- Use "personality_disorder" when text shows identity confusion, intense fear of abandonment, splitting behavior (idealizing then hating), chronic relationship instability, or dissociation. Key signals: "don't know who I am", "everyone leaves", "push people away"
+- Use "sad" for temporary, situational sadness (bad day, loss, disappointment) that does NOT suggest a chronic pattern
+- Use "anxious" for worry, nervousness, and general anxiety that is NOT specifically about workload/pressure
+
 Critical safety rules:
-- Text mentioning wanting to die, self-harm, ending life, feeling worthless with no hope MUST trigger safetyAlert=true and primaryEmotion=sad
+- Text mentioning wanting to die, self-harm, ending life, feeling worthless with no hope MUST trigger safetyAlert=true and primaryEmotion=suicidal
 - NEVER classify distressing/crisis text as "happy"
 - When in doubt about safety, err on the side of triggering the alert
 - You may receive dataset keyword matches as supplementary context appended to the user's text. These are pattern matches from a 51,000+ entry mental health dataset and should be treated as a SOFT REFERENCE signal only. ALWAYS prioritize the full meaning, tone, and emotional context of the journal entry over dataset keyword matches. The dataset is a supporting partner, not the decision-maker. For example, if a positive book review mentions words like "alone" or "trauma", the dataset may flag Depression — but YOU must recognize the overall positive/loving tone and classify accordingly.`;
@@ -98,7 +107,7 @@ Deno.serve(async (req) => {
               parameters: {
                 type: "object",
                 properties: {
-                  primaryEmotion: { type: "string", enum: ["happy", "sad", "angry", "fear", "surprise", "love", "anxious"] },
+                  primaryEmotion: { type: "string", enum: ["happy", "sad", "angry", "fear", "surprise", "love", "anxious", "depression", "suicidal", "stress", "bipolar", "personality_disorder"] },
                   confidence: { type: "integer", minimum: 55, maximum: 98 },
                   sentiment: { type: "string", enum: ["Positive", "Negative", "Neutral", "Mixed"] },
                   intensity: { type: "string", enum: ["Low", "Medium", "High"] },

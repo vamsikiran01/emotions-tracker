@@ -1,4 +1,4 @@
-export type EmotionType = 'happy' | 'sad' | 'angry' | 'fear' | 'surprise' | 'love' | 'anxious' | 'neutral';
+export type EmotionType = 'happy' | 'sad' | 'angry' | 'fear' | 'surprise' | 'love' | 'anxious' | 'neutral' | 'depression' | 'suicidal' | 'stress' | 'bipolar' | 'personality_disorder';
 export type SentimentType = 'Positive' | 'Negative' | 'Neutral' | 'Mixed';
 export type IntensityLevel = 'Low' | 'Medium' | 'High';
 
@@ -28,6 +28,11 @@ export const EMOTION_META: Record<EmotionType, { emoji: string; color: string; l
   love: { emoji: '❤️', color: 'var(--emotion-love)', label: 'Love' },
   anxious: { emoji: '😰', color: 'var(--emotion-anxious)', label: 'Anxious' },
   neutral: { emoji: '😐', color: 'var(--emotion-neutral)', label: 'Neutral' },
+  depression: { emoji: '😞', color: 'var(--emotion-depression)', label: 'Depression' },
+  suicidal: { emoji: '🆘', color: 'var(--emotion-suicidal)', label: 'Suicidal' },
+  stress: { emoji: '😫', color: 'var(--emotion-stress)', label: 'Stress' },
+  bipolar: { emoji: '🎭', color: 'var(--emotion-bipolar)', label: 'Bipolar' },
+  personality_disorder: { emoji: '🪞', color: 'var(--emotion-personality-disorder)', label: 'Personality Disorder' },
 };
 
 const KEYWORD_MAP: Record<EmotionType, { words: string[]; weight: number }[]> = {
@@ -60,6 +65,26 @@ const KEYWORD_MAP: Record<EmotionType, { words: string[]; weight: number }[]> = 
     { words: ['what if', 'concern', 'doubt', 'uncertain', 'deadline', 'too much', 'cant handle', 'struggling', 'keep replaying'], weight: 0.6 },
   ],
   neutral: [],
+  depression: [
+    { words: ['depressed', 'depression', 'hopeless', 'worthless', 'emptiness', 'numb', 'hollow', 'meaningless', 'pointless', 'no purpose', 'lost interest', 'cant enjoy', 'no motivation', 'giving up', 'chronic sadness', 'darkness', 'void', 'apathy', 'lifeless', 'flat'], weight: 1.0 },
+    { words: ['tired of everything', 'no energy', 'withdrawn', 'isolating', 'disconnected', 'going through the motions', 'fake smile', 'pretending'], weight: 0.6 },
+  ],
+  suicidal: [
+    { words: ['suicidal', 'suicide', 'kill myself', 'end my life', 'want to die', 'better off dead', 'no reason to live', 'ending it', 'self harm', 'self-harm', 'cut myself', 'hurt myself', 'overdose', 'jump off', 'hang myself'], weight: 1.0 },
+    { words: ['cant go on', 'no point in living', 'burden to everyone', 'nobody would miss me', 'world without me', 'final goodbye', 'last letter', 'giving up on life'], weight: 0.8 },
+  ],
+  stress: [
+    { words: ['stressed', 'stress', 'overwhelmed', 'burnout', 'burned out', 'overworked', 'deadline', 'pressure', 'too much work', 'workload', 'exhausted', 'swamped', 'drowning in work', 'cant keep up', 'falling behind', 'no time', 'stretched thin'], weight: 1.0 },
+    { words: ['tension', 'headache', 'cant relax', 'on edge', 'juggling', 'demanding', 'hectic', 'chaotic', 'rushing', 'cramming'], weight: 0.6 },
+  ],
+  bipolar: [
+    { words: ['bipolar', 'manic', 'mania', 'mood swings', 'highs and lows', 'rapid cycling', 'euphoria then crash', 'emotional rollercoaster', 'up and down', 'extreme mood', 'unstable mood'], weight: 1.0 },
+    { words: ['cant control my moods', 'one moment happy next sad', 'impulsive', 'reckless spending', 'racing thoughts then nothing', 'energy burst then crash', 'grandiose then depressed'], weight: 0.6 },
+  ],
+  personality_disorder: [
+    { words: ['identity crisis', 'dont know who i am', 'fear of abandonment', 'splitting', 'idealize then hate', 'black and white thinking', 'unstable relationships', 'chronic emptiness', 'dissociation', 'dissociating', 'detached from reality'], weight: 1.0 },
+    { words: ['people always leave', 'push people away', 'intense attachment', 'love hate', 'no sense of self', 'changing personality', 'emotional instability', 'impulsive behavior'], weight: 0.6 },
+  ],
 };
 
 // Flat set of all emotion-related words for quick lookup
@@ -117,6 +142,31 @@ const INSIGHTS: Record<EmotionType, string[]> = {
     "There's a steady, balanced tone in what you've shared. Not every moment needs to be intense — this is okay.",
     "Your words reflect a neutral state of mind. This can be a good foundation for reflection and self-awareness.",
   ],
+  depression: [
+    "Your words carry a deep heaviness that goes beyond a rough day. It sounds like you've been carrying this weight for a while, and that takes real strength.",
+    "There's a persistent sadness in your writing that suggests you may be dealing with something deeper. You don't have to face this alone.",
+    "Your entry reflects feelings of emptiness and lost hope. These feelings are real, and reaching out — even through journaling — is a courageous step.",
+  ],
+  suicidal: [
+    "We can see you're in a very dark place right now, and we want you to know that your life matters. Please reach out to someone you trust.",
+    "Your words tell us you're going through immense pain. You deserve support and care right now — please don't go through this alone.",
+    "We hear you, and what you're feeling is incredibly heavy. Please talk to someone — a friend, family member, or professional who can help.",
+  ],
+  stress: [
+    "It sounds like you're juggling a lot right now and the pressure is really building up. Your feelings of being overwhelmed are completely valid.",
+    "Your writing reflects someone carrying a heavy workload. Burnout is real, and recognizing it is the first step to finding relief.",
+    "There's a lot of tension in your words. Stress can pile up quietly — it's good that you're acknowledging it here.",
+  ],
+  bipolar: [
+    "Your entry describes significant mood shifts that sound really exhausting. Riding that emotional rollercoaster takes a lot out of you.",
+    "The extreme highs and lows you're describing can feel disorienting. Tracking these patterns through journaling is a really smart move.",
+    "Your words reflect rapid emotional changes that can be confusing and draining. Understanding your cycles is key to managing them.",
+  ],
+  personality_disorder: [
+    "Your entry reflects deep struggles with identity and relationships. These feelings of instability are painful, but awareness is a powerful first step.",
+    "The push-pull dynamics you're describing in your relationships sound really exhausting. You deserve stable, caring connections.",
+    "Your words suggest you're wrestling with a shifting sense of self. This kind of inner turmoil is real and deserves compassionate attention.",
+  ],
 };
 
 const SUGGESTIONS: Record<EmotionType, string[]> = {
@@ -168,6 +218,36 @@ const SUGGESTIONS: Record<EmotionType, string[]> = {
     "☕ Enjoy a quiet moment with your favorite drink — just be present",
     "🎵 Put on some music you enjoy and let yourself relax",
   ],
+  depression: [
+    "🌅 Try to get some sunlight today, even just 10 minutes by a window — it genuinely helps",
+    "🫂 Reach out to one person today, even just a short text — connection matters",
+    "🚿 Start with one small thing: take a shower, make your bed, or eat a meal — small wins count",
+    "📓 Write down one tiny thing that went okay today — retraining your brain to notice good takes time",
+  ],
+  suicidal: [
+    "🫂 Please talk to someone you trust right now — a friend, family member, or counselor. You matter.",
+    "💙 You don't have to face this alone. Reaching out for help is the bravest thing you can do.",
+    "🚶 If you can, step outside and take a few deep breaths. A change of environment can help in the moment.",
+    "✍️ Write down one reason to stay — even a small one. Sometimes one reason is enough.",
+  ],
+  stress: [
+    "📋 Write down everything on your plate, then pick just ONE thing to tackle first",
+    "⏸️ Take a real break — step away from screens for 15 minutes and do something calming",
+    "🫁 Try box breathing: 4 seconds in, 4 hold, 4 out, 4 hold — repeat 5 times",
+    "🚫 Say no to one thing today — protecting your time is self-care",
+  ],
+  bipolar: [
+    "📊 Track your mood changes with timestamps — patterns become clearer over time",
+    "😴 Prioritize consistent sleep — irregular sleep can trigger mood episodes",
+    "🧘 Practice grounding when you feel a shift coming — 5 senses exercise works well",
+    "📝 During stable moments, write a plan for how to handle highs and lows",
+  ],
+  personality_disorder: [
+    "🪞 When emotions feel overwhelming, pause and name what you're feeling — labeling helps",
+    "📝 Write about what triggered the intense reaction — understanding patterns builds stability",
+    "🧘 Practice dialectical thinking: two opposite things can both be true at the same time",
+    "🫂 Identify one safe, stable relationship and invest in it — quality over quantity",
+  ],
 };
 
 function tokenize(text: string): string[] {
@@ -191,6 +271,7 @@ export function analyzeEmotion(text: string): EmotionResult {
   const lower = text.toLowerCase();
   const scores: Record<EmotionType, number> = {
     happy: 0, sad: 0, angry: 0, fear: 0, surprise: 0, love: 0, anxious: 0, neutral: 0,
+    depression: 0, suicidal: 0, stress: 0, bipolar: 0, personality_disorder: 0,
   };
 
   // Emoji/symbol detection
@@ -213,6 +294,7 @@ export function analyzeEmotion(text: string): EmotionResult {
   }
   const matchedKeywords: Record<EmotionType, string[]> = {
     happy: [], sad: [], angry: [], fear: [], surprise: [], love: [], anxious: [], neutral: [],
+    depression: [], suicidal: [], stress: [], bipolar: [], personality_disorder: [],
   };
 
   for (const [emotion, groups] of Object.entries(KEYWORD_MAP) as [EmotionType, typeof KEYWORD_MAP[EmotionType]][]) {
@@ -231,10 +313,11 @@ export function analyzeEmotion(text: string): EmotionResult {
     }
   }
 
-  // Safety check — if crisis language detected, bias toward sad
+  // Safety check — if crisis language detected, bias toward suicidal
   const safety = detectSafety(text);
   if (safety.alert) {
-    scores.sad += 3;
+    scores.suicidal += 5;
+    scores.sad += 2;
   }
 
   // Default to neutral if no strong signals
@@ -261,7 +344,7 @@ export function analyzeEmotion(text: string): EmotionResult {
 
   // Sentiment
   const posEmotions: EmotionType[] = ['happy', 'love', 'surprise'];
-  const negEmotions: EmotionType[] = ['sad', 'angry', 'fear', 'anxious'];
+  const negEmotions: EmotionType[] = ['sad', 'angry', 'fear', 'anxious', 'depression', 'suicidal', 'stress', 'bipolar', 'personality_disorder'];
   const posScore = posEmotions.reduce((s, e) => s + scores[e], 0);
   const negScore = negEmotions.reduce((s, e) => s + scores[e], 0);
   let sentiment: SentimentType = 'Neutral';
@@ -336,7 +419,7 @@ export async function analyzeEmotionWithAI(text: string): Promise<EmotionResult>
     if (error) throw error;
     if (!data || !data.primaryEmotion) throw new Error('Invalid AI response');
 
-    const validEmotions: EmotionType[] = ['happy', 'sad', 'angry', 'fear', 'surprise', 'love', 'anxious', 'neutral'];
+    const validEmotions: EmotionType[] = ['happy', 'sad', 'angry', 'fear', 'surprise', 'love', 'anxious', 'neutral', 'depression', 'suicidal', 'stress', 'bipolar', 'personality_disorder'];
     if (!validEmotions.includes(data.primaryEmotion)) throw new Error('Invalid emotion type');
 
     return {

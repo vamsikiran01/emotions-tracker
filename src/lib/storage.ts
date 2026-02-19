@@ -132,6 +132,9 @@ export function getEmotionDistribution(entries: JournalEntry[]): { emotion: stri
     happy: 'hsl(120, 50%, 55%)', sad: 'hsl(30, 85%, 55%)', angry: 'hsl(0, 75%, 50%)',
     fear: 'hsl(270, 55%, 55%)', surprise: 'hsl(210, 70%, 55%)', love: 'hsl(330, 70%, 65%)',
     anxious: 'hsl(30, 40%, 40%)', neutral: 'hsl(0, 0%, 55%)',
+    depression: 'hsl(50, 80%, 50%)', suicidal: 'hsl(0, 60%, 30%)',
+    stress: 'hsl(140, 50%, 30%)', bipolar: 'hsl(220, 70%, 30%)',
+    personality_disorder: 'hsl(40, 40%, 70%)',
   };
   return Object.entries(counts).map(([emotion, count]) => ({
     emotion: emotion.charAt(0).toUpperCase() + emotion.slice(1),

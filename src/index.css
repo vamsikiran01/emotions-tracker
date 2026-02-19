@@ -44,6 +44,11 @@
     --emotion-love: 330 70% 65%;
     --emotion-neutral: 0 0% 55%;
     --emotion-anxious: 30 40% 40%;
+    --emotion-depression: 50 80% 50%;
+    --emotion-suicidal: 0 60% 30%;
+    --emotion-stress: 140 50% 30%;
+    --emotion-bipolar: 220 70% 30%;
+    --emotion-personality-disorder: 40 40% 70%;
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -92,6 +97,11 @@
     --emotion-love: 330 65% 60%;
     --emotion-neutral: 0 0% 50%;
     --emotion-anxious: 30 35% 35%;
+    --emotion-depression: 50 75% 45%;
+    --emotion-suicidal: 0 55% 25%;
+    --emotion-stress: 140 45% 25%;
+    --emotion-bipolar: 220 65% 25%;
+    --emotion-personality-disorder: 40 35% 60%;
 
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
