@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft, AlertTriangle, Lightbulb, Brain, Share2, Pencil, Trash2, Save, X, Loader2 } from 'lucide-react';
+import { ArrowLeft, Lightbulb, Brain, Share2, Pencil, Trash2, Save, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,6 +11,12 @@ import type { JournalEntry } from '@/lib/storage';
 import { isEnglishWord } from '@/lib/englishWords';
 import { toast } from '@/hooks/use-toast';
 import NLPAnalysisCard from '@/components/NLPAnalysisCard';
+import ExplainableTextHeatmap from '@/components/ExplainableTextHeatmap';
+import VADRadarCard from '@/components/VADRadarCard';
+import CognitiveDistortionsCard from '@/components/CognitiveDistortionsCard';
+import CrisisSafetyDrawer from '@/components/CrisisSafetyDrawer';
+import { calculateVADMetrics } from '@/lib/vadModel';
+import { detectCognitiveDistortions } from '@/lib/cognitiveDistortions';
 
 const intensityColor: Record<string, string> = {
   Low: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 shadow-sm',
@@ -40,6 +46,7 @@ const Results = () => {
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState('');
   const [reanalyzing, setReanalyzing] = useState(false);
+
   useEffect(() => {
     if (!entry) {
       navigate('/');
@@ -50,6 +57,22 @@ const Results = () => {
     if (!entry) return '';
     const meta = EMOTION_META[entry.result.primaryEmotion];
     return meta?.color ?? '';
+  }, [entry]);
+
+  const vadMetrics = useMemo(() => {
+    if (!entry) return null;
+    return calculateVADMetrics({
+      emotion: entry.result.primaryEmotion,
+      sentiment: entry.result.sentiment,
+      intensity: entry.result.intensity,
+      confidence: entry.result.confidence,
+      text: entry.text,
+    });
+  }, [entry]);
+
+  const cognitiveDistortions = useMemo(() => {
+    if (!entry) return [];
+    return detectCognitiveDistortions(entry.text);
   }, [entry]);
 
   if (!entry) return null;
@@ -84,38 +107,38 @@ const Results = () => {
 
     setReanalyzing(true);
     try {
+      const words = trimmed.split(/\s+/).filter(Boolean);
+      let newResult: EmotionResult;
 
-    const words = trimmed.split(/\s+/).filter(Boolean);
-    let newResult: EmotionResult;
-
-    if (words.length === 1) {
-      const word = words[0].toLowerCase().replace(/[^a-z]/g, '');
-      if (EMOTION_WORDS_SET.has(word)) {
-        newResult = await analyzeEmotionWithAI(trimmed);
+      if (words.length === 1) {
+        const word = words[0].toLowerCase().replace(/[^a-z]/g, '');
+        if (EMOTION_WORDS_SET.has(word)) {
+          newResult = await analyzeEmotionWithAI(trimmed);
+        } else {
+          newResult = {
+            primaryEmotion: 'neutral' as EmotionType,
+            confidence: 80,
+            sentiment: 'Neutral',
+            keywords: [],
+            intensity: 'Low',
+            insight: "You shared a simple thought. Not every moment carries a strong emotion — and that's perfectly fine. 😊",
+            suggestions: [
+              "📝 Try writing a bit more about how your day is going",
+              "🚶 Take a moment to check in with yourself — how are you really feeling?",
+              "☕ Enjoy this calm moment and let your thoughts flow freely",
+            ],
+            safetyAlert: false,
+          };
+        }
       } else {
-        newResult = {
-          primaryEmotion: 'neutral' as EmotionType,
-          confidence: 80,
-          sentiment: 'Neutral',
-          keywords: [],
-          intensity: 'Low',
-          insight: "You shared a simple thought. Not every moment carries a strong emotion — and that's perfectly fine. 😊",
-          suggestions: [
-            "📝 Try writing a bit more about how your day is going",
-            "🚶 Take a moment to check in with yourself — how are you really feeling?",
-            "☕ Enjoy this calm moment and let your thoughts flow freely",
-          ],
-          safetyAlert: false,
-        };
+        newResult = await analyzeEmotionWithAI(trimmed);
       }
-    } else {
-      newResult = await analyzeEmotionWithAI(trimmed);
-    }
 
-    const updated: JournalEntry = { ...entry, text: trimmed, result: newResult };
-    await updateEntry(updated);
-    setEntry(updated);
-    setEditing(false);
+      const updated: JournalEntry = { ...entry, text: trimmed, result: newResult };
+      await updateEntry(updated);
+      setEntry(updated);
+      setEditing(false);
+      toast({ title: 'Entry re-analyzed ✨', description: 'Updated analysis and metrics computed.' });
     } finally {
       setReanalyzing(false);
     }
@@ -130,8 +153,8 @@ const Results = () => {
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-gradient-to-br from-primary/5 via-accent/10 to-secondary/20">
-      <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 max-w-2xl">
-        <div className="flex items-center justify-between mb-4 sm:mb-6 animate-fade-slide-up stagger-1">
+      <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 max-w-2xl space-y-6">
+        <div className="flex items-center justify-between animate-fade-slide-up stagger-1">
           <Button variant="ghost" onClick={() => navigate('/')} className="gap-2 text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" /> Write Another Entry
           </Button>
@@ -147,7 +170,7 @@ const Results = () => {
 
         {/* Edit mode */}
         {editing && (
-          <Card className="mb-4 sm:mb-6 shadow-md border-primary/30 animate-fade-slide-up">
+          <Card className="shadow-md border-primary/30 animate-fade-slide-up">
             <CardContent className="p-4 sm:p-5 space-y-3">
               <p className="text-sm font-medium text-foreground">Edit your entry</p>
               <Textarea
@@ -178,26 +201,13 @@ const Results = () => {
           </Card>
         )}
 
-        {/* Original text preview */}
-        <Card className="mb-4 sm:mb-6 shadow-sm border-border/50 animate-fade-slide-up stagger-1">
-          <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground mb-1">Your entry</p>
-            <p className="text-sm text-foreground leading-relaxed">"{entry.text}"</p>
-          </CardContent>
-        </Card>
-
-        {/* Safety Alert */}
+        {/* Safety Alert (Upgraded with Crisis Hotlines & Guided Calming) */}
         {result.safetyAlert && (
-          <Card className="mb-4 sm:mb-6 border-destructive/30 bg-destructive/5 animate-fade-slide-up stagger-1">
-            <CardContent className="p-4 sm:p-5 flex gap-3">
-              <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
-              <p className="text-sm leading-relaxed text-foreground">{result.safetyMessage}</p>
-            </CardContent>
-          </Card>
+          <CrisisSafetyDrawer safetyMessage={result.safetyMessage} />
         )}
 
         {/* Primary Emotion Card */}
-        <Card className="mb-4 sm:mb-6 shadow-lg border-border/50 overflow-hidden animate-fade-slide-up stagger-2">
+        <Card className="shadow-lg border-border/50 overflow-hidden animate-fade-slide-up stagger-2">
           <div
             className="h-2 w-full"
             style={{ background: `linear-gradient(90deg, hsl(${colorStrip}) 0%, hsl(${colorStrip} / 0.4) 100%)` }}
@@ -227,15 +237,29 @@ const Results = () => {
               <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${intensityColor[result.intensity]}`}>
                 {result.intensity} Intensity
               </span>
+              {result.mentalHealthStatus && (
+                <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+                  {result.mentalHealthStatus.status} (Kaggle-Aligned)
+                </span>
+              )}
             </div>
           </CardContent>
         </Card>
 
+        {/* Explainable AI (XAI) Word Sentiment Heatmap */}
+        <ExplainableTextHeatmap text={entry.text} />
+
+        {/* Valence, Arousal, Dominance (VAD) Dimensional Gauge */}
+        {vadMetrics && <VADRadarCard vad={vadMetrics} />}
+
+        {/* Cognitive Distortions Analysis */}
+        <CognitiveDistortionsCard distortions={cognitiveDistortions} />
+
         {/* AI Insight */}
-        <Card className="mb-4 sm:mb-6 shadow-md border-border/50 animate-fade-slide-up stagger-4">
+        <Card className="shadow-md border-border/50 animate-fade-slide-up stagger-4">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm sm:text-base flex items-center gap-2">
-              <Brain className="h-4 w-4 text-primary" /> AI Insight
+              <Brain className="h-4 w-4 text-primary" /> AI Clinical Insight
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
@@ -243,11 +267,11 @@ const Results = () => {
           </CardContent>
         </Card>
 
-        {/* Suggestions */}
+        {/* Personalized Suggestions */}
         <Card className="shadow-md border-border/50 animate-fade-slide-up stagger-6">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm sm:text-base flex items-center gap-2">
-              <Lightbulb className="h-4 w-4 text-primary" /> Personalized Suggestions
+              <Lightbulb className="h-4 w-4 text-primary" /> Personalized Emotional Suggestions
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
@@ -261,24 +285,25 @@ const Results = () => {
           </CardContent>
         </Card>
 
-        {/* NLP Analysis */}
-        <div className="mt-4 sm:mt-6">
-          <NLPAnalysisCard text={entry.text} />
-        </div>
+        {/* Detailed NLP Feature Extraction Card */}
+        <NLPAnalysisCard text={entry.text} />
 
-        {/* Share hint */}
-        <div className="mt-6 text-center animate-fade-slide-up stagger-6">
+        {/* Share Action */}
+        <div className="pt-2 text-center animate-fade-slide-up stagger-6">
           <Button
             variant="ghost"
             size="sm"
             className="text-xs text-muted-foreground gap-1.5"
             onClick={() => {
               if (navigator.share) {
-                navigator.share({ title: 'My Emotion Analysis', text: `I'm feeling ${meta.label} today.` });
+                navigator.share({ title: 'My Emotion Analysis', text: `My emotional check-in: Feeling ${meta.label}.` });
+              } else {
+                navigator.clipboard.writeText(`Emo Track Check-in: Feeling ${meta.label} with ${result.confidence}% confidence.`);
+                toast({ title: 'Copied to clipboard!', description: 'Summary copied.' });
               }
             }}
           >
-            <Share2 className="h-3.5 w-3.5" /> Share Results
+            <Share2 className="h-3.5 w-3.5" /> Share Wellness Summary
           </Button>
         </div>
       </div>

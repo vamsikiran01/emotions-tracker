@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { NavLink } from 'react-router-dom';
 import { useTheme } from '@/hooks/useTheme';
 import { useIsMobile } from '@/hooks/use-mobile';
+import TechArchitectureModal from './TechArchitectureModal';
 
 const navItems = [
   { to: '/', label: 'Journal' },
@@ -31,11 +32,14 @@ const Header = () => {
 
         {/* Desktop nav */}
         {!isMobile && (
-          <nav className="flex items-center gap-1">
+          <nav className="flex items-center gap-2">
             {navItems.map(item => (
               <NavLink key={item.to} to={item.to} className={navClass}>{item.label}</NavLink>
             ))}
-            <Button variant="ghost" size="icon" onClick={toggle} className="ml-2">
+            <div className="ml-1 mr-1">
+              <TechArchitectureModal />
+            </div>
+            <Button variant="ghost" size="icon" onClick={toggle} className="ml-1">
               {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </Button>
           </nav>
@@ -43,7 +47,8 @@ const Header = () => {
 
         {/* Mobile controls */}
         {isMobile && (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
+            <TechArchitectureModal />
             <Button variant="ghost" size="icon" onClick={toggle}>
               {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </Button>
